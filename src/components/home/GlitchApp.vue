@@ -40,7 +40,7 @@ export default {
         X: 0,
         Y: 0,
       },
-      displayText: 'I make things', // افزودن متغیر برای نمایش متن
+      displayText: 'I make things',
     };
   },
 
@@ -59,8 +59,8 @@ export default {
     this.svg.addEventListener('mousemove', (e) => {
   const svgRect = this.svg.getBoundingClientRect();
   this.mouseMoving = true;
-  this.mouse.X = e.clientX - svgRect.left; // مختصات X نسبت به SVG
-  this.mouse.Y = e.clientY - svgRect.top; // مختصات Y نسبت به SVG
+  this.mouse.X = e.clientX - svgRect.left;
+  this.mouse.Y = e.clientY - svgRect.top;
 });
   },
   methods: {
@@ -69,11 +69,11 @@ export default {
       this.displayText = newText;},
 
       handleMouseOver() {
-      this.mouse.power = 80;
+      this.mouse.power = 55;
       this.changeText('I break things');
     },
     handleMouseOut() {
-      this.mouse.power = 13;
+      this.mouse.power = 40;
       this.changeText('I make things');
     },
 
@@ -84,10 +84,10 @@ export default {
 
 
     lines.forEach(line => {
-    line.setAttribute('stroke', 'white');
+    line.setAttribute('stroke', '#ADAAAA33');
   });
     circles.forEach(circle => {
-      circle.setAttribute('fill', 'white');
+      circle.setAttribute('fill', '#ADAAAA51');
     })
   },
 
@@ -98,12 +98,11 @@ export default {
     },
     init() {
       this.screenW = window.innerWidth;
-      this.screenH = 620;
-            // Check if the screen width is less than a certain threshold (e.g., 600 pixels)
+      this.screenH = 640;
   if (window.innerWidth < 600) {
-    this.dotNumber = 160; // Set the desired number of dots for mobile size
+    this.dotNumber = 150; // Set the desired number of dots for mobile size
   } else {
-    this.dotNumber = 207; // Set the default number of dots for larger screens
+    this.dotNumber = 120; // Set the default number of dots for larger screens
   }
   if (window.innerWidth < 600) {
     this.lineNumber = 5; // Set the desired number of dots for mobile size
@@ -238,8 +237,11 @@ svg, html, body {
   width: 100%;
   padding: 0;
   margin: 0;
-  background: #111827 ;
-}
+  background-image: url("../../assets/images/backGround.jpg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-position-x: 65%;
+  background-size: cover;}
 
 svg circle {
   position: relative;

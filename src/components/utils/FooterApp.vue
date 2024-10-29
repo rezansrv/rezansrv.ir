@@ -21,7 +21,7 @@
   
   <style scoped>
     .footer {
-      background-color: #111827;
+      background-color: #000000;
       color: #ffffff;
       font-family: Barlow, Barlow fallback, sans-serif;
       text-align: center;

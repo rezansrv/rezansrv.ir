@@ -29,7 +29,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #111827;
+  background-color: #000000;
   font-family: Barlow, Barlow fallback, sans-serif;
   padding: 50px;
   padding-top: 80px;
