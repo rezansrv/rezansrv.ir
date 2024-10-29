@@ -5,7 +5,7 @@
       <ul class="links">
         <li>
           <a href="https://github.com/Rezansrv" target="_blank" rel="noopener noreferrer">
-            <img src="../assets/git2.png" alt="GitHub" style="width: 29px; height: 28px; margin-top: -3px;" />
+            <img src="../../assets/images/social/git2.png" alt="GitHub" style="width: 29px; height: 28px; margin-top: -3px;" />
           </a>
         </li>
 <!--        <li><router-link class="navLink" to="/speaking">speaking</router-link></li>-->

@@ -1,27 +1,26 @@
 <template>
   <div>
-    <Head/>
+    <Header/>
     <Glitch class="animate__animated animate__backInUp"/>
     <AboutME/>
-    <FooterApp/>
+    <Footer/>
   </div>
 </template>
 
 <script>
-import Glitch from '../components/GlitchApp.vue';
-import Head from '../components/HeaderApp.vue';
-import AboutME from '../components/AboutMe.vue';
-import FooterApp from '../components/FooterApp.vue'
+import Glitch from '../components/home/GlitchApp.vue';
+import Header from '../components/utils/HeaderApp.vue';
+import AboutME from '../components/home/AboutMe.vue';
+import Footer from '../components/utils/FooterApp.vue'
 
 export default {
   name: 'App',
   components: {
     Glitch,
-    Head,
+    Header,
     AboutME,
-    FooterApp
-  }
-}
+    Footer
+  }}
 </script>
 
 <style>

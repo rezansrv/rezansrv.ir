@@ -79,8 +79,8 @@
 </template>
 
 <script>
-import Head from '../components/HeaderApp.vue';
-import FooterApp from '../components/FooterApp.vue'
+import Head from '../components/utils/HeaderApp.vue';
+import FooterApp from '../components/utils/FooterApp.vue'
 
 export default {
   name: 'App',

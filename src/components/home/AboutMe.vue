@@ -48,7 +48,7 @@
 .profile-image {
   width: 220px;
   height: 220px;
-  background-image: url("../assets/me.jpg");
+  background-image: url("../../assets/images/me.jpg");
   background-size: cover;
   border-radius: 50%;
   shape-outside: circle(50%);
