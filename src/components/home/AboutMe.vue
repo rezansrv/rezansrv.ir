@@ -5,19 +5,17 @@
         <div class="profile-image" ></div>
       </div>
       <div class="text-container">
-        <h1>Welcome!</h1>
+        <h1>Hello!</h1>
         <p>
-          Reza Naserivand is a dedicated and highly skilled front-end developer with
-          approximately 1 year of hands-on experience in crafting immersive and
-          user-friendly interfaces. His primary focus is on creating visually
-          captivating designs that provide exceptional user experiences.
+          I’m Reza Naserivand, a front-end developer with about a year of hands-on experience
+          in creating immersive and user-friendly interfaces. My focus is on crafting visually
+          appealing designs that deliver exceptional user experiences.
         </p>
         <p>
-          His technical proficiency includes JavaScript, React, Vue.js, and Git,
-          empowering him to build dynamic and engaging web applications with a strong
-          emphasis on efficient deployment. Reza remains committed to keeping pace
-          with the latest front-end technologies and industry best practices,
-          ensuring he can provide cutting-edge solutions.
+          I’m skilled in JavaScript, React, Vue.js, and Git, which allows me to build dynamic
+          and engaging web applications with an emphasis on efficient deployment.
+          I’m committed to staying up-to-date with the latest front-end technologies
+          and industry best practices, ensuring that I can provide cutting-edge solutions.
         </p>
       </div>
     </div>
@@ -51,7 +49,7 @@
   background-image: url("../../assets/images/me.jpg");
   background-size: cover;
   border-radius: 50%;
-  shape-outside: circle(50%);
+  //shape-outside: circle(50%);
   float: left;
   margin-right: 20px;
   text-align: left;

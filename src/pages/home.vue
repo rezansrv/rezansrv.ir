@@ -1,7 +1,7 @@
 <template>
   <div>
     <Header/>
-    <Glitch class="animate__animated animate__backInUp"/>
+    <Glitch/>
     <AboutME/>
     <Footer/>
   </div>
