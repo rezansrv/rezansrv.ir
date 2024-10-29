@@ -1,124 +1,90 @@
-<template  style="border-bottom: white">
+<template>
   <header class="header">
-    <div class="nav">
-      <router-link class="logo" to="/">REZA NASERIVAND</router-link>
-      <ul class="links">
+    <nav class="header--nav">
+      <router-link class="header--nav--logo" to="/">REZA NASERIVAND</router-link>
+      <ul class="header--nav--links">
         <li>
           <a href="https://github.com/Rezansrv" target="_blank" rel="noopener noreferrer">
-            <img src="../../assets/images/social/git2.png" alt="GitHub" style="width: 29px; height: 28px; margin-top: -3px;" />
+            <img src="../../assets/images/social/git2.png" alt="GitHub"
+                 style="width: 29px; height: 28px; margin-top: -3px;"/>
           </a>
         </li>
-<!--        <li><router-link class="navLink" to="/speaking">speaking</router-link></li>-->
-        <li><router-link class="navLink" to="/writing">writing</router-link></li>
-        <li><router-link class="navLink" to="/projects">projects</router-link></li>
-        <li><router-link class="navLink" to="/">Home</router-link></li>
+        <li>
+          <router-link class="header--nav--link" to="/writing">writing</router-link>
+        </li>
+        <li>
+          <router-link class="header--nav--link" to="/projects">projects</router-link>
+        </li>
+        <li>
+          <router-link class="header--nav--link" to="/">Home</router-link>
+        </li>
       </ul>
-      <router-view></router-view>
-    </div>
+    </nav>
   </header>
 
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 
-.header{
-  border: white;
-}
-.navLink {
-  text-decoration: none;
+.header {
+  background-color: #000000;
 
+  &--nav {
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 30px;
+    padding-inline: 80px;
+    color: #ededed;
+    font-family: Barlow, Barlow fallback, sans-serif;
+    @media (max-width: 740px) {
+      flex-direction: column;
+      text-align: center;
+    }
 
-}
+    &--logo {
+      text-decoration: none;
+      color: #fff;
+      font-size: 24px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
 
-.navLink:focus-visible{
-}
-.navLink:active {
-  text-decoration: underline;
-}
+    &--links {
+      list-style-type: none;
+      display: flex;
+      gap: 20px;
+      margin: 0;
+      @media (max-width: 740px) {
+        padding-top: 25px;
+      }
+      @media (max-width: 600px) {
+        padding-top: 25px;
+        border: 2px white;
+      }
 
+      li {
+        cursor: pointer;
+        font-size: 20px;
+      }
 
-.navLink::after{
-  text-decoration: underline;
-}
+      li a {
+        color: #ededed;
+      }
+    }
 
-.nav {
-  text-transform: uppercase;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 30px;
-  padding-inline: 80px;
-  background-color: #111827;
-  color: #ededed;
-  font-family: Barlow, Barlow fallback, sans-serif;
-}
+    &--link {
+      text-decoration: none;
 
-.logo {
-  text-decoration: none;
-  color: #fff;
-  font-size: 24px;
-  font-weight: bold;
-  white-space: nowrap;
-}
+      &:hover {
+        text-decoration: underline;
+      }
 
-.links {
-  list-style-type: none;
-  display: flex;
-  gap: 20px;
-  margin: 0;
-
-}
-
-.links li {
-  cursor: pointer;
-  font-size: 20px;
-}
-
-.links li a {
-  color: #ededed;
-}
-
-.links li:hover a,
-.links li:active a {
-  text-decoration: underline;
-}
-
-
-@media (max-width: 740px) {
-
-  .links {
-    padding-top: 25px;
-  }
-  .links li{
-    font-size: 20px;
-  }
-
-  .nav {
-    flex-direction: column;
-    text-align: center;
-  }
-
-}
-
-@media (max-width: 600px) {
-  .nav {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .links {
-    padding-top: 25px;
-    border: 2px white;
-  }
-  .links li{
-    font-size: 5vw;
-  }
-
-  .logo{
-    font-size: 6vw;
+      &.router-link-exact-active {
+        text-decoration: underline;
+      }
+    }
   }
 }
-
 </style>
-<script setup>
-</script>
