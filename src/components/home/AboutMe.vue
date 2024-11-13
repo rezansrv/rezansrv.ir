@@ -2,12 +2,14 @@
   <div class="welcome-container">
     <div class="center">
       <div class="image-container">
-        <div class="profile-image" ></div>
+        <div class="profile-image" >
+          <img loading="lazy" src="../../assets/images/me.jpg" alt="profile-image">
+        </div>
       </div>
       <div class="text-container">
         <h1>Hello!</h1>
         <p>
-          I’m Reza Naserivand, a front-end developer with about a year of hands-on experience
+          I’m Reza Naserivand, a front-end developer with experience
           in creating immersive and user-friendly interfaces. My focus is on crafting visually
           appealing designs that deliver exceptional user experiences.
         </p>
@@ -29,8 +31,7 @@
   align-items: center;
   background-color: #000000;
   font-family: Barlow, Barlow fallback, sans-serif;
-  padding: 50px;
-  padding-top: 80px;
+  padding: 80px 50px 50px;
 }
 
 .center {
@@ -43,10 +44,10 @@
   position: relative;
 }
 
-.profile-image {
+.profile-image img {
   width: 220px;
   height: 220px;
-  background-image: url("../../assets/images/me.jpg");
+  //background-image: url("../../assets/images/me.jpg");
   background-size: cover;
   border-radius: 50%;
   //shape-outside: circle(50%);

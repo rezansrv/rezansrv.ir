@@ -4,7 +4,6 @@
     <text
   x="50%"
   y="50%"
-  font-size="150"
   text-anchor="middle"
   fill="white"
   @mouseover="handleMouseOver"
@@ -257,13 +256,10 @@ svg line {
   text-transform: uppercase;
   font-size:11.5vw;
   cursor: pointer;
-  position: relative;
   z-index: 1000;
   text-align: center;
   font-family: Gotham XNarrow A, Gotham XNarrow B, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif;
-  font-weight: bold; /* Changed from 400 to bold */
-  font-style: normal;
-  color: white;
+  font-weight: bold;
   animation: glitch 2s steps(100) infinite;
 }
 @keyframes glitch {
