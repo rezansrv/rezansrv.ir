@@ -1,22 +1,22 @@
 <template>
   <div>
-    <svg id="svg">
-    <text
-  x="50%"
-  y="50%"
-  text-anchor="middle"
-  fill="white"
-  @mouseover="handleMouseOver"
-  @mouseout="handleMouseOut"
-  class="text-glitch"
->
-  {{ displayText }}
-</text>
+    <svg ref="svg">
+      <text
+        x="50%"
+        y="50%"
+        text-anchor="middle"
+        fill="white"
+        @mouseover="handleMouseOver"
+        @mouseout="handleMouseOut"
+        class="text-glitch"
+      >
+        {{ displayText }}
+      </text>
     </svg>
   </div>
 </template>
-<script>
 
+<script>
 export default {
   data() {
     return {
@@ -35,7 +35,7 @@ export default {
       mouseMoving: false,
       mouse: {
         distances: [],
-        power:13,
+        power: 13,
         X: 0,
         Y: 0,
       },
@@ -44,121 +44,116 @@ export default {
   },
 
   mounted() {
-    this.svg = document.getElementById('svg');
+    this.svg = this.$refs.svg;
     this.init();
     this.animate();
-    
-    this.setStyles(); // Add this line
-    //********************************************************************** */
-    // window.addEventListener('resize', () => {
-    //   this.destroy();
-    //   this.init();
-      
-    // });
-    this.svg.addEventListener('mousemove', (e) => {
-  const svgRect = this.svg.getBoundingClientRect();
-  this.mouseMoving = true;
-  this.mouse.X = e.clientX - svgRect.left;
-  this.mouse.Y = e.clientY - svgRect.top;
-});
-  },
-  methods: {
-    //mouse hover
-    changeText(newText) {
-      this.displayText = newText;},
+    this.setStyles();
 
-      handleMouseOver() {
+    this.svg.addEventListener('mousemove', this.handleMouseMove);
+  },
+
+  methods: {
+    changeText(newText) {
+      this.displayText = newText;
+    },
+
+    handleMouseOver() {
       this.mouse.power = 55;
       this.changeText('I break things');
     },
+
     handleMouseOut() {
       this.mouse.power = 40;
       this.changeText('I make things');
     },
 
-      setStyles() {
-        
-    const circles = this.svg.querySelectorAll('circle');
-    const lines = this.svg.querySelectorAll('line');
+    handleMouseMove(e) {
+      const svgRect = this.svg.getBoundingClientRect();
+      this.mouseMoving = true;
+      this.mouse.X = e.clientX - svgRect.left;
+      this.mouse.Y = e.clientY - svgRect.top;
+    },
 
+    setStyles() {
+      const circles = this.svg.querySelectorAll('circle');
+      const lines = this.svg.querySelectorAll('line');
 
-    lines.forEach(line => {
-    line.setAttribute('stroke', '#ADAAAA33');
-  });
-    circles.forEach(circle => {
-      circle.setAttribute('fill', '#ADAAAA51');
-    })
-  },
+      lines.forEach(line => {
+        line.setAttribute('stroke', '#ADAAAA33');
+      });
+
+      circles.forEach(circle => {
+        circle.setAttribute('fill', '#ADAAAA51');
+      });
+    },
 
     animate() {
       this.moveDots();
       this.mouseInteraction();
       requestAnimationFrame(this.animate);
     },
+
     init() {
-      this.screenW = window.innerWidth;
-      this.screenH = 640;
-  if (window.innerWidth < 600) {
-    this.dotNumber = 150; // Set the desired number of dots for mobile size
-  } else {
-    this.dotNumber = 120; // Set the default number of dots for larger screens
-  }
-  if (window.innerWidth < 600) {
-    this.lineNumber = 5; // Set the desired number of dots for mobile size
-  } else {
-    this.lineNumber = 6; // Set the default number of dots for larger screens
-  }
+      this.screenW = window.innerWidth - 10;
+      this.screenH = window.innerHeight - 80;
+      this.dotNumber = window.innerWidth < 600 ? 150 : 120;
+      this.lineNumber = window.innerWidth < 600 ? 5 : 6;
       this.dotRows = Math.sqrt(this.dotNumber * (this.screenH / this.screenW));
       this.dotColumns = this.dotNumber / this.dotRows;
-      var dotPosStepX = Math.round(this.screenW / this.dotColumns);
-      var dotPosStepY = Math.round(this.screenH / this.dotRows);
+      const dotPosStepX = Math.round(this.screenW / this.dotColumns);
+      const dotPosStepY = Math.round(this.screenH / this.dotRows);
       this.dotRows = Math.round(this.dotRows);
       this.dotColumns = Math.round(this.dotColumns);
-  //     const fixedHeight = 600; // Change this value to your desired height
-  // this.svg.setAttribute('height', fixedHeight);
       this.svg.setAttribute('height', this.screenH);
+
       for (let i = 0, j = 0, k = 0; i < this.dotNumber; i++, k++) {
         if (i % this.dotColumns === 0) {
           j++;
           k = 0;
         }
-        this.dots[i] = {};
-        this.dots[i].distances = [];
-        this.dots[i].el = this.dotMatrix.cloneNode(false);
-        this.dots[i].X = k * dotPosStepX + dotPosStepX / 2;
-        this.dots[i].X += Math.floor((Math.random() * this.dotRandomMax) + 1 - this.dotRandomMax / 2);
-        this.dots[i].Y = j * dotPosStepY - dotPosStepY / 2;
-        this.dots[i].Y += Math.floor((Math.random() * this.dotRandomMax) + 1 - this.dotRandomMax / 2);
-        this.dots[i].r = 1;
-        this.dots[i].lines = [];
+        this.dots[i] = {
+          distances: [],
+          el: this.dotMatrix.cloneNode(false),
+          X: k * dotPosStepX + dotPosStepX / 2 + Math.floor((Math.random() * this.dotRandomMax) + 1 - this.dotRandomMax / 2),
+          Y: j * dotPosStepY - dotPosStepY / 2 + Math.floor((Math.random() * this.dotRandomMax) + 1 - this.dotRandomMax / 2),
+          r: 1,
+          lines: []
+        };
+
         this.dots[i].el.setAttribute('cx', this.dots[i].X);
         this.dots[i].el.setAttribute('cy', this.dots[i].Y);
         this.dots[i].el.setAttribute('r', this.dots[i].r);
         this.svg.appendChild(this.dots[i].el);
+
         for (let l = 0; l < this.lineNumber; l++) {
-          this.dots[i].lines[l] = {};
-          this.dots[i].lines[l].el = this.lineMatrix.cloneNode(false);
-          this.dots[i].lines[l].X1 = this.dots[i].X;
-          this.dots[i].lines[l].Y1 = this.dots[i].Y;
-          this.dots[i].lines[l].X2 = this.dots[i].X;
-          this.dots[i].lines[l].Y2 = this.dots[i].Y;
+          this.dots[i].lines[l] = {
+            el: this.lineMatrix.cloneNode(false),
+            X1: this.dots[i].X,
+            Y1: this.dots[i].Y,
+            X2: this.dots[i].X,
+            Y2: this.dots[i].Y
+          };
+
           this.dots[i].lines[l].el.setAttribute('stroke', 'rgba(0,255,255,0.00)');
           this.dots[i].lines[l].el.setAttribute('stroke-width', '1');
           this.svg.appendChild(this.dots[i].lines[l].el);
         }
       }
     },
+
     destroy() {
       while (this.svg.firstChild) {
         this.svg.removeChild(this.svg.firstChild);
       }
       this.dots.length = 0;
     },
+
     dotUpdate() {
       for (let i = 0; i < this.dotNumber; i++) {
         this.dots[i].el.setAttribute('cx', this.dots[i].X);
         this.dots[i].el.setAttribute('cy', this.dots[i].Y);
         this.dots[i].el.setAttribute('r', this.dots[i].r);
+
         for (let l = 0; l < this.lineNumber; l++) {
           this.dots[i].lines[l].el.setAttribute('x1', this.dots[i].lines[l].X1);
           this.dots[i].lines[l].el.setAttribute('y1', this.dots[i].lines[l].Y1);
@@ -167,21 +162,23 @@ export default {
         }
       }
     },
+
     getDistance(obj1, obj2) {
       return Math.floor(Math.sqrt(Math.pow((obj1.X - obj2.X), 2) + Math.pow((obj1.Y - obj2.Y), 2)));
     },
+
     moveDots() {
       for (let i = 0; i < this.dotNumber; i++) {
         this.dots[i].X += Math.floor((Math.random() * 5) - 2);
         this.dots[i].Y += Math.floor((Math.random() * 5) - 2);
-        // Add boundary checks to keep dots within the screen
         this.dots[i].X = Math.max(0, Math.min(this.screenW, this.dots[i].X));
         this.dots[i].Y = Math.max(0, Math.min(this.screenH, this.dots[i].Y));
 
         for (let j = 0; j < this.dotNumber; j++) {
           this.dots[i].distances[j] = [j, this.getDistance(this.dots[i], this.dots[j])];
         }
-        this.dots[i].distances = this.dots[i].distances.sort(this.Comparator);
+        this.dots[i].distances.sort(this.Comparator);
+
         for (let k = 0; k < this.lineNumber; k++) {
           this.dots[i].lines[k].X1 = this.dots[i].X;
           this.dots[i].lines[k].Y1 = this.dots[i].Y;
@@ -191,17 +188,18 @@ export default {
       }
       this.dotUpdate();
     },
+
     mouseInteraction() {
       if (this.mouseMoving) {
         for (let i = 0; i < this.dotNumber; i++) {
           this.dots[i].r = 1;
           this.mouse.distances[i] = [i, this.getDistance(this.mouse, this.dots[i])];
         }
-        this.mouse.distances = this.mouse.distances.sort(this.Comparator);
+        this.mouse.distances.sort(this.Comparator);
 
         for (let j = 0; j < this.mouse.power && j < this.mouse.distances.length; j++) {
-          let maxDist = this.mouse.distances[this.mouse.power - 1][1];
-          let thisDist = this.mouse.distances[j][1];
+          const maxDist = this.mouse.distances[this.mouse.power - 1][1];
+          const thisDist = this.mouse.distances[j][1];
           this.dots[this.mouse.distances[j][0]].r = 2;
 
           if (this.mouse.X >= this.dots[this.mouse.distances[j][0]].X) {
@@ -218,21 +216,18 @@ export default {
         this.mouseMoving = false;
       }
     },
+
     Comparator(a, b) {
-      if (a[1] < b[1]) return -1;
-      if (a[1] > b[1]) return 1;
-      return 0;
+      return a[1] - b[1];
     },
   },
 };
 </script>
 
-
 <style scoped>
-
 svg, html, body {
   box-sizing: border-box;
-  height: 50%;
+  height: 90vh;
   width: 100%;
   padding: 0;
   margin: 0;
@@ -240,21 +235,17 @@ svg, html, body {
   background-repeat: no-repeat;
   background-position: center;
   background-position-x: 65%;
-  background-size: cover;}
-
-svg circle {
-  position: relative;
-  z-index: 0;
+  background-size: cover;
 }
 
-svg line {
+svg circle, svg line {
   position: relative;
   z-index: 0;
 }
 
 .text-glitch {
   text-transform: uppercase;
-  font-size:11.5vw;
+  font-size: 11.5vw;
   cursor: pointer;
   z-index: 1000;
   text-align: center;
@@ -570,5 +561,4 @@ svg line {
     text-shadow: -2.2px 0 0 blue, 2.2px 0 0 lime;
   }
 }
-
 </style>

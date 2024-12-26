@@ -14,8 +14,7 @@
               </h3>
               <p class="post-publish">
                 Published on {{ post.publishDate }}, on
-                <a :href="post.source">{{ post.source }}</a
-                >.
+                <a :href="post.source">{{ post.source }}</a>.
                 <span style="margin-left: 8px">time: {{ post.readingTime }}</span>
               </p>
               <p class="post-describe">
@@ -31,33 +30,14 @@
 </template>
 
 <script>
+import posts from '../../../data/postsList';
+
 export default {
   data() {
     return {
-      posts: [
-        {
-          id: 1,
-          title: "Front-End Security",
-          link: "https://g2tech.co/front-end-security/",
-          publishDate: "Mar 29, 2024",
-          source: "https://g2tech.co/",
-          readingTime: "5 min.",
-          description:
-            "Front-end security refers to the measures and practices implemented to protect the client-side components of a web application, such as web browsers, user interfaces, and client-side scripts, from various security threats and vulnerabilities. Ensuring front-end security is crucial for safeguarding sensitive data, maintaining user privacy, and preventing unauthorized access to web applications.",
-        },
-        {
-          id: 2,
-          title: "The best Front-End Design Patterns",
-          link: "https://g2tech.co/the-best-front-end-design-patterns/",
-          publishDate: "Jan 7, 2024",
-          source: "https://g2tech.co/",
-          readingTime: "10 min.",
-          description:
-            "Explore how these design patterns can revolutionize your front-end development, offering solutions to common challenges and elevating aspects like code organization, maintainability, and scalability. From the modular Module Pattern to the flexible MVVM architecture, delve into proven strategies for crafting efficient and responsive web applications in this discussion of common design patterns in the frontend domain.",
-        },
-      ],
+      posts
     };
-  },
+  }
 };
 </script>
 
@@ -175,7 +155,7 @@ p a:visited {
 }
 .seepost:hover {
   margin-left: 10px;
-  background: #111827;
+  background: #dcdbdb;
   color: #aa0753;
 }
 

@@ -1,0 +1,92 @@
+[
+  {
+    "name": "rezansrv.ir",
+    "url": "https://github.com/rezansrv/rezansrv.ir",
+    "stars": 5,
+    "description": "This is the code and content for my personal website, built in Vue."
+  },
+  {
+    "name": "sample-registration-form",
+    "url": "https://github.com/rezansrv/sample-registration-form",
+    "stars": 3,
+    "description": "My Test"
+  },
+  {
+    "name": "nuxt-unit-testing",
+    "url": "https://github.com/rezansrv/nuxt-unit-testing",
+    "stars": 3,
+    "description": "Unit testing with Nuxt.js"
+  },
+  {
+    "name": "drag-and-drop-vue",
+    "url": "https://github.com/rezansrv/drag-and-drop-vue",
+    "stars": 3,
+    "description": "Drag & drop app with Vue (Nuxt3)"
+  },
+  {
+    "name": "reCAPTCHA",
+    "url": "https://github.com/rezansrv/reCAPTCHA",
+    "stars": 3,
+    "description": "Google reCAPTCHA for Nuxt 3 (vue-recaptcha-v3)"
+  },
+  {
+    "name": "G2-Intership-Front",
+    "url": "https://github.com/rezansrv/G2-Intership-Front",
+    "stars": 7,
+    "description": "A site to display courses written with Nuxt2, Vue class based component, Typescript, Tailwindcss"
+  },
+  {
+    "name": "DFA-Minimizetion-JS",
+    "url": "https://github.com/rezansrv/DFA-Minimizetion-JS",
+    "stars": 6,
+    "description": "University project automata theory languages ​​and computation"
+  },
+  {
+    "name": "NFA-to-DFA-JS",
+    "url": "https://github.com/rezansrv/NFA-to-DFA-JS",
+    "stars": 3,
+    "description": "NFA to DFA Convertor written with JS"
+  },
+  {
+    "name": "weatherApp",
+    "url": "https://github.com/rezansrv/weatherApp",
+    "stars": 7,
+    "description": "Weather app with openweather API"
+  },
+  {
+    "name": "online-shop-vue",
+    "url": "https://github.com/rezansrv/online-shop-vue",
+    "stars": 7,
+    "description": "Online shop with API that has a shopping cart section and is written with Vue, Pinia, Vuetify, Vite"
+  },
+  {
+    "name": "Natural-Language-Processing-NLP",
+    "url": "https://github.com/rezansrv/Natural-Language-Processing-NLP",
+    "stars": 6,
+    "description": "Multilingual NLP Text Processing in Python"
+  },
+  {
+    "name": "foodi-landing-page",
+    "url": "https://github.com/rezansrv/foodi-landing-page",
+    "stars": 10,
+    "description": "Foodi (landingPage) with database (MySQL) and backend with PHP for register and login users"
+  },
+  {
+    "name": "Employees-List-Vue",
+    "url": "https://github.com/rezansrv/Employees-List-Vue",
+    "stars": 7,
+    "description": "Employees List with Vue2 and API with Json Server, have login and registry pages with routing and have task Todo list using Vuex"
+  },
+  {
+    "name": "Admin-Dashboard",
+    "url": "https://github.com/rezansrv/Admin-Dashboard",
+    "stars": 9,
+    "description": "Responsive Admin Dashboard Using HTML, CSS & JavaScript with Light & Dark Mode"
+  },
+  {
+    "name": "website-health-check",
+    "url": "https://github.com/rezansrv/website-health-check",
+    "stars": 6,
+    "description": "A simple version of checking the health of websites with bash script"
+  }
+]
