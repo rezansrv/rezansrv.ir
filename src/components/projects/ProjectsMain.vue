@@ -66,6 +66,10 @@ export default {
     padding: 0.8rem 0.4rem;
     text-align: left;
 }
+
+.github-table tr:last-child td {
+    border-bottom: none;
+}
 .github-table td h3 {
     padding-bottom: 5px;
     font-size: 25px;

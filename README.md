@@ -1,5 +1,3 @@
-# psite
-
 ## Project setup
 ```
 npm install or npm i

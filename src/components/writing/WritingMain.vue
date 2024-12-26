@@ -104,6 +104,9 @@ export default {
   padding: 0.8rem 0.4rem 0.8rem 0.4rem;
   text-align: left;
 }
+.posts-table tr:last-child td {
+  border-bottom: none;
+}
 .posts-table td h3 {
   padding-bottom: 5px;
   font-size: 25px;

@@ -2,7 +2,7 @@
 
 
 <footer class="footer">
-  <p>&copy; 2024 Reza Naserivand</p>
+  <p>&copy; 2025 Reza Naserivand🎄❄️</p>
   <div class="social-icons">
     <a href="https://github.com/Rezansrv" target="_blank" rel="noopener noreferrer" >
       <img src="../../assets/images/social/git.png" alt="GitHub" loading="lazy" />
@@ -26,7 +26,7 @@
       font-family: Barlow, Barlow fallback, sans-serif;
       text-align: center;
       padding: 20px;
-
+      margin-top: 30px;
     }
     .footer p{
       font-size:16px ;
@@ -41,7 +41,7 @@
     }
   
     .social-icons img {
-      width: 35px; /* تنظیم اندازه لوگوها */
+      width: 35px; 
       height: 35px;
     }
   </style>
