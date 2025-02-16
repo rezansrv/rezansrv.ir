@@ -80,7 +80,7 @@ p {
   font-size: 18px;
   line-height: 1.6;
   margin-bottom: 15px;
-  text-align: justify-all;
+  text-align: justify;
   hyphens: auto;
 }
 
