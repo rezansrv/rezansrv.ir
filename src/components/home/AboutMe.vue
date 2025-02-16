@@ -80,6 +80,7 @@ p {
   font-size: 18px;
   line-height: 1.6;
   margin-bottom: 15px;
+  text-align: justify;
 }
 
 @media (max-width: 600px) {
