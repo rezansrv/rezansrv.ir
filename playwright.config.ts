@@ -1,11 +1,11 @@
-const { defineConfig } = require('@playwright/test');
+import { defineConfig, devices } from '@playwright/test'
 
-const browserChannel = process.env.PLAYWRIGHT_CHANNEL || (process.env.CI ? null : 'chrome');
-const browserSelection = browserChannel ? { channel: browserChannel } : {};
+const browserChannel = process.env.PLAYWRIGHT_CHANNEL || (process.env.CI ? undefined : 'chrome')
+const browserSelection = browserChannel ? { channel: browserChannel } : {}
 
-module.exports = defineConfig({
+export default defineConfig({
   testDir: './tests/e2e',
-  globalSetup: require.resolve('./tests/e2e/global-setup'),
+  globalSetup: './tests/e2e/global-setup.ts',
   timeout: 20_000,
   expect: {
     timeout: 5_000,
@@ -35,12 +35,11 @@ module.exports = defineConfig({
     {
       name: 'mobile-chromium',
       use: {
+        ...devices['Pixel 5'],
         browserName: 'chromium',
         ...browserSelection,
         viewport: { width: 390, height: 844 },
-        hasTouch: true,
-        isMobile: true,
       },
     },
   ],
-});
+})

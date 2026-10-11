@@ -39,8 +39,17 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Build
         run: npm run build
 
-      - name: Run smoke tests
-        run: npm run test:smoke
+      - name: Generate static site
+        run: npm run generate
+
+      - name: Verify generated HTML
+        run: npm run test:generated
+
+      - name: Run smoke tests against generated output
+        run: npm run test:smoke:generated

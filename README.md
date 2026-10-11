@@ -11,27 +11,42 @@
 npm ci
 ```
 
-### Compiles and hot-reloads for development
+### Starts Nuxt in development mode
 
 ```
-npm run serve
+npm run dev
 ```
 
-### Compiles and minifies for production
+### Builds the universal application
 
 ```
 npm run build
 ```
 
-### Lints files
+### Generates the static Cloudflare Pages artifact
+
+The deployable files are written to `.output/public`.
+
+```
+npm run generate
+```
+
+### Previews a Nuxt build
+
+```
+npm run preview
+```
+
+### Lints and type-checks files
 
 ```
 npm run lint
+npm run typecheck
 ```
 
 ### Runs browser smoke tests
 
-The smoke suite starts the development server automatically and checks the public routes in desktop and mobile Chromium projects.
+The smoke suite generates the site, serves `.output/public` with the repository test server, and checks the public routes in desktop and mobile Chromium projects.
 
 ```
 npm run test:smoke
@@ -43,6 +58,4 @@ npm run test:smoke
 npm run validate
 ```
 
-### Customize configuration
-
-See [Configuration Reference](https://cli.vuejs.org/config/).
+This runs linting, type checking, the production build, static generation, generated-HTML checks, and the Playwright smoke suite.
