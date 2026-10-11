@@ -69,7 +69,6 @@
 
     @media (max-width: 740px) {
       flex-direction: column;
-      padding-inline: 30px;
       text-align: center;
     }
 
@@ -84,7 +83,6 @@
     &--links {
       display: flex;
       gap: 20px;
-      align-items: center;
       padding: 0;
       margin: 0;
       list-style-type: none;
@@ -98,9 +96,11 @@
       }
 
       img {
+        display: inline;
         width: 29px;
         height: 28px;
         margin-top: -3px;
+        max-width: none;
       }
 
       a {

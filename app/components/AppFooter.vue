@@ -67,8 +67,6 @@
   text-align: center;
 
   &__social-icons {
-    display: flex;
-    justify-content: center;
     margin-bottom: 15px;
 
     a {
@@ -76,8 +74,10 @@
     }
 
     img {
+      display: inline;
       width: 35px;
       height: 35px;
+      max-width: none;
     }
   }
 
