@@ -29,6 +29,7 @@ defineProps<{
             </p>
             <a
               :href="post.link"
+              :aria-label="`Read ${post.title}`"
               class="seepost"
             >see post ⟶</a>
           </td>

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 
 const outputRoot = resolve(process.cwd(), '.output', 'public')
 const projectsData = JSON.parse(readFileSync(resolve(process.cwd(), 'data/projectsList.json'), 'utf8'))
+const postsData = JSON.parse(readFileSync(resolve(process.cwd(), 'data/postsList.json'), 'utf8'))
 const routes = [
   {
     path: '/',
@@ -56,6 +57,22 @@ for (const route of routes) {
       for (const project of projectsData) {
         assert.ok(html.includes(`href="${project.url}"`), `Generated /projects should include ${project.url}`)
         assert.ok(html.includes(`aria-label="${project.name}"`), `Generated /projects should label the ${project.name} link`)
+      }
+    }
+
+    if (route.path === '/writing') {
+      assert.equal(postsData.length, route.rowCount, 'The writing data should contain two records')
+      let previousTitlePosition = -1
+      for (const post of postsData) {
+        const titlePosition = html.indexOf(post.title)
+        assert.ok(titlePosition > previousTitlePosition, `Generated /writing should preserve the order at ${post.title}`)
+        previousTitlePosition = titlePosition
+        assert.ok(html.includes(post.publishDate), `Generated /writing should include ${post.publishDate}`)
+        assert.ok(html.includes(post.readingTime), `Generated /writing should include ${post.readingTime}`)
+        assert.ok(html.includes(post.description), `Generated /writing should include the complete description for ${post.title}`)
+        assert.ok(html.includes(`href="${post.link}"`), `Generated /writing should include the post URL for ${post.title}`)
+        assert.ok(html.includes(`aria-label="Read ${post.title}"`), `Generated /writing should provide a contextual CTA name for ${post.title}`)
+        assert.ok(html.includes(`href="${post.source}"`), `Generated /writing should include the source URL for ${post.title}`)
       }
     }
   }

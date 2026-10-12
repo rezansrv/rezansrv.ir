@@ -9,9 +9,22 @@ type ProjectRecord = {
   description: string
 }
 
+type PostRecord = {
+  id: number
+  title: string
+  link: string
+  publishDate: string
+  source: string
+  readingTime: string
+  description: string
+}
+
 const projectRecords = JSON.parse(
   readFileSync(resolve(process.cwd(), 'data/projectsList.json'), 'utf8'),
 ) as ProjectRecord[]
+const postRecords = JSON.parse(
+  readFileSync(resolve(process.cwd(), 'data/postsList.json'), 'utf8'),
+) as PostRecord[]
 
 const routes = [
   { path: '/', heading: 'Hello!', title: 'Reza Naserivand | Front-End Developer' },
@@ -91,7 +104,30 @@ for (const route of routes) {
       await expect(firstRow.locator('td')).toHaveCSS('filter', 'brightness(1.5)')
     }
     else {
-      await expect(page.locator('.posts-table tbody tr')).toHaveCount(2)
+      const rows = page.locator('.posts-table tbody tr')
+      await expect(rows).toHaveCount(postRecords.length)
+
+      for (const [index, post] of postRecords.entries()) {
+        const row = rows.nth(index)
+        const links = row.getByRole('link')
+        await expect(row.locator('h3')).toHaveText(post.title)
+        await expect(row.locator('.post-publish')).toContainText(`Published on ${post.publishDate}, on ${post.source}.`)
+        await expect(row.locator('.post-publish')).toContainText(`time: ${post.readingTime}`)
+        await expect(row.locator('.post-describe')).toHaveText(post.description)
+        await expect(links).toHaveCount(3)
+        await expect(links.nth(0)).toHaveText(post.title)
+        await expect(links.nth(0)).toHaveAttribute('href', post.link)
+        await expect(links.nth(1)).toHaveText(post.source)
+        await expect(links.nth(1)).toHaveAttribute('href', post.source)
+        await expect(links.nth(2)).toHaveAttribute('href', post.link)
+        await expect(links.nth(2)).toHaveAttribute('aria-label', `Read ${post.title}`)
+        await expect(links.nth(2)).toBeVisible()
+        await expect(links.nth(2)).toContainText(/see post/i)
+        await expect(row.locator('a a')).toHaveCount(0)
+        for (const link of await links.all()) {
+          await expect(link).not.toHaveAttribute('target', /.+/)
+        }
+      }
     }
 
     const reloadResponse = await page.reload({ waitUntil: 'domcontentloaded' })
@@ -209,4 +245,59 @@ test('project links expose visible keyboard focus and activate with Enter', asyn
   await page.keyboard.press('Enter')
   await expect(page).toHaveURL(firstProject.url)
   expect(interceptedUrls).toEqual([firstProject.url])
+})
+
+test('writing post links preserve destinations and expose accessible keyboard behavior', async ({ page }) => {
+  await openReadyPage(page, routes[2])
+  const firstPost = postRecords[0]
+  const row = page.locator('.posts-table tbody tr').first()
+  const cell = row.locator('td')
+  const titleLink = row.getByRole('link', { name: firstPost.title, exact: true })
+  const sourceLink = row.getByRole('link', { name: firstPost.source, exact: true })
+  const cta = row.getByRole('link', { name: `Read ${firstPost.title}`, exact: true })
+
+  await expect(cta).toBeVisible()
+  await cell.hover()
+  await expect(cell).toHaveCSS('filter', 'brightness(1.5)')
+  await cta.hover()
+  await expect(cta).toHaveCSS('background-color', 'rgb(220, 219, 219)')
+  await expect(cta).toHaveCSS('color', 'rgb(170, 7, 83)')
+  await expect(cta).toHaveCSS('margin-left', '10px')
+  await expect(titleLink).toHaveAttribute('href', firstPost.link)
+  await expect(sourceLink).toHaveAttribute('href', firstPost.source)
+  await expect(cta).toHaveAttribute('href', firstPost.link)
+  await expect(cta).not.toHaveAttribute('target', /.+/)
+
+  let focusedText = ''
+  for (let tabPress = 0; tabPress < 20 && focusedText !== firstPost.title; tabPress += 1) {
+    await page.keyboard.press('Tab')
+    focusedText = await page.evaluate(() => document.activeElement?.textContent?.trim() ?? '')
+  }
+  await expect(titleLink).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(sourceLink).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(cta).toBeFocused()
+
+  const focusStyle = await cta.evaluate(element => ({
+    focusVisible: element.matches(':focus-visible'),
+    outlineStyle: getComputedStyle(element).outlineStyle,
+    outlineWidth: getComputedStyle(element).outlineWidth,
+  }))
+  expect(focusStyle.focusVisible).toBe(true)
+  expect(focusStyle.outlineStyle).toBe('solid')
+  expect(focusStyle.outlineWidth).toBe('3px')
+
+  const interceptedUrls: string[] = []
+  await page.route('https://g2tech.co/**', async (route) => {
+    interceptedUrls.push(route.request().url())
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      body: '<!doctype html><title>External navigation intercepted</title>',
+    })
+  })
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(firstPost.link)
+  expect(interceptedUrls).toEqual([firstPost.link])
 })
