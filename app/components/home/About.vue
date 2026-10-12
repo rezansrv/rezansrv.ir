@@ -82,7 +82,6 @@ p {
 @media (max-width: 600px) {
   .welcome-container {
     flex-direction: column;
-    padding: 80px 20px 60px;
   }
 
   .image-container,
@@ -92,7 +91,6 @@ p {
   }
 
   .profile-image img {
-    float: none;
     margin: 25px 0;
   }
 }

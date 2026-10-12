@@ -24,7 +24,6 @@
         x="50%"
         y="50%"
         text-anchor="middle"
-        dominant-baseline="middle"
       >I make things</text>
     </svg>
   </section>
@@ -53,6 +52,12 @@
   font-weight: bold;
   text-transform: uppercase;
   animation: glitch 2s steps(20) infinite;
+}
+
+@media (max-width: 600px) {
+  .text-glitch {
+    font-size: 12.25vw;
+  }
 }
 
 @keyframes glitch {
