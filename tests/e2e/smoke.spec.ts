@@ -1,4 +1,17 @@
 import { expect, test, type Page } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+type ProjectRecord = {
+  name: string
+  url: string
+  stars: number
+  description: string
+}
+
+const projectRecords = JSON.parse(
+  readFileSync(resolve(process.cwd(), 'data/projectsList.json'), 'utf8'),
+) as ProjectRecord[]
 
 const routes = [
   { path: '/', heading: 'Hello!', title: 'Reza Naserivand | Front-End Developer' },
@@ -58,7 +71,24 @@ for (const route of routes) {
       expect(await profileImage.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
     }
     else if (route.path === '/projects') {
-      await expect(page.locator('.github-table tbody tr')).toHaveCount(15)
+      const rows = page.locator('.github-table tbody tr')
+      await expect(rows).toHaveCount(projectRecords.length)
+
+      for (const [index, project] of projectRecords.entries()) {
+        const row = rows.nth(index)
+        const link = row.getByRole('link')
+        await expect(row.locator('h3')).toHaveText(project.name)
+        await expect(row.locator('p').first()).toContainText(String(project.stars))
+        await expect(row.locator('p').nth(1)).toHaveText(project.description)
+        await expect(link).toHaveCount(1)
+        await expect(link).toHaveAttribute('href', project.url)
+        await expect(link).toHaveAttribute('aria-label', project.name)
+        await expect(link).not.toHaveAttribute('target', /.+/)
+      }
+
+      const firstRow = rows.first()
+      await firstRow.hover()
+      await expect(firstRow.locator('td')).toHaveCSS('filter', 'brightness(1.5)')
     }
     else {
       await expect(page.locator('.posts-table tbody tr')).toHaveCount(2)
@@ -110,4 +140,73 @@ test('layout follows the baseline desktop and mobile breakpoints', async ({ page
     expect(layout.navDirection).toBe('row')
     expect(layout.headingPosition).toBe('fixed')
   }
+})
+
+test('the full project row activates its same-tab link without visiting GitHub', async ({ page }) => {
+  await openReadyPage(page, routes[1])
+  const firstProject = projectRecords[0]
+  const firstRow = page.locator('.github-table tbody tr').first()
+  const cell = firstRow.locator('td')
+  const link = firstRow.getByRole('link', { name: firstProject.name })
+  const [cellBounds, linkBounds] = await Promise.all([
+    cell.boundingBox(),
+    link.boundingBox(),
+  ])
+
+  expect(cellBounds).not.toBeNull()
+  expect(linkBounds).not.toBeNull()
+  expect(linkBounds!.x).toBeCloseTo(cellBounds!.x, 0)
+  expect(linkBounds!.y).toBeCloseTo(cellBounds!.y, 0)
+  expect(linkBounds!.width).toBeCloseTo(cellBounds!.width, 0)
+  expect(Math.abs(linkBounds!.height - cellBounds!.height)).toBeLessThanOrEqual(1)
+
+  const interceptedUrls: string[] = []
+  await page.route('https://github.com/**', async (route) => {
+    interceptedUrls.push(route.request().url())
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      body: '<!doctype html><title>External navigation intercepted</title>',
+    })
+  })
+
+  await cell.click({ position: { x: cellBounds!.width - 2, y: cellBounds!.height / 2 } })
+  await expect(page).toHaveURL(firstProject.url)
+  expect(interceptedUrls).toEqual([firstProject.url])
+})
+
+test('project links expose visible keyboard focus and activate with Enter', async ({ page }) => {
+  await openReadyPage(page, routes[1])
+  const firstProject = projectRecords[0]
+  const link = page.locator('.github-table tbody tr').first().getByRole('link', { name: firstProject.name })
+
+  let focusedHref: string | null = null
+  for (let tabPress = 0; tabPress < 20 && focusedHref !== firstProject.url; tabPress += 1) {
+    await page.keyboard.press('Tab')
+    focusedHref = await page.evaluate(() => (document.activeElement as HTMLAnchorElement | null)?.href ?? null)
+  }
+  expect(focusedHref).toBe(firstProject.url)
+  await expect(link).toBeFocused()
+
+  const focusStyle = await link.evaluate(element => ({
+    focusVisible: element.matches(':focus-visible'),
+    outlineStyle: getComputedStyle(element).outlineStyle,
+    outlineWidth: getComputedStyle(element).outlineWidth,
+  }))
+  expect(focusStyle.focusVisible).toBe(true)
+  expect(focusStyle.outlineStyle).toBe('solid')
+  expect(focusStyle.outlineWidth).toBe('3px')
+
+  const interceptedUrls: string[] = []
+  await page.route('https://github.com/**', async (route) => {
+    interceptedUrls.push(route.request().url())
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      body: '<!doctype html><title>External navigation intercepted</title>',
+    })
+  })
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(firstProject.url)
+  expect(interceptedUrls).toEqual([firstProject.url])
 })

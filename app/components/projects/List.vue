@@ -16,11 +16,15 @@ defineProps<{
           :key="project.name"
         >
           <td>
-            <h3>
-              <a :href="project.url">{{ project.name }}</a>
-            </h3>
-            <p>✩ {{ project.stars }}</p>
-            <p>{{ project.description }}</p>
+            <a
+              class="project-link"
+              :href="project.url"
+              :aria-label="project.name"
+            >
+              <h3>{{ project.name }}</h3>
+              <p>✩ {{ project.stars }}</p>
+              <p>{{ project.description }}</p>
+            </a>
           </td>
         </tr>
       </tbody>
@@ -52,14 +56,21 @@ defineProps<{
 }
 
 .github-table td {
-  padding: 0.8rem 0.4rem;
+  padding: 0;
   border-bottom: 1px solid #4b4a4a;
   text-align: left;
 }
 
-.github-table td:hover {
+.github-table td:hover,
+.github-table td:focus-within {
   filter: brightness(150%);
   transition: filter 0.7s ease;
+}
+
+.project-link {
+  display: block;
+  padding: 0.8rem 0.4rem;
+  text-decoration: none;
 }
 
 .github-table tr:last-child td {
@@ -68,11 +79,11 @@ defineProps<{
 
 .github-table td h3 {
   padding-bottom: 5px;
-  color: #fff;
+  color: #dcdbdb;
   font-family: "Gotham XNarrow A", "Gotham XNarrow B", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 25px;
   font-style: normal;
-  font-weight: 500;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -81,14 +92,6 @@ defineProps<{
   color: #b5b3b3;
   font-size: 18px;
   line-height: 1.6;
-}
-
-.github h3 a,
-.github h3 a:active,
-.github h3 a:visited {
-  color: #dcdbdb;
-  font-weight: 700;
-  text-decoration: none;
 }
 
 @media (max-width: 780px) {

@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import assert from 'node:assert/strict'
 
 const outputRoot = resolve(process.cwd(), '.output', 'public')
+const projectsData = JSON.parse(readFileSync(resolve(process.cwd(), 'data/projectsList.json'), 'utf8'))
 const routes = [
   {
     path: '/',
@@ -49,6 +50,14 @@ for (const route of routes) {
   if (route.rowCount) {
     const rows = html.match(/<tr(?:\s|>)/g) || []
     assert.equal(rows.length, route.rowCount, `${route.path} should render ${route.rowCount} content rows`)
+
+    if (route.path === '/projects') {
+      assert.equal(projectsData.length, route.rowCount, 'The project data should contain 15 records')
+      for (const project of projectsData) {
+        assert.ok(html.includes(`href="${project.url}"`), `Generated /projects should include ${project.url}`)
+        assert.ok(html.includes(`aria-label="${project.name}"`), `Generated /projects should label the ${project.name} link`)
+      }
+    }
   }
 }
 
