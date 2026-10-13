@@ -92,6 +92,23 @@ test('dispose removes stable event listeners and tracked SVG nodes', () => {
   assert.equal(lifecycle.track(element), false)
 })
 
+test('tracked SVG nodes can be cleared and replaced without repeated removal on dispose', () => {
+  const lifecycle = createHeroAnimationLifecycle(createFrameQueue())
+  const removed: number[] = []
+  const first = { remove() { removed.push(1) } } as unknown as SVGElement
+  const second = { remove() { removed.push(2) } } as unknown as SVGElement
+
+  lifecycle.track(first)
+  lifecycle.track(second)
+  assert.equal(lifecycle.clearTracked(), true)
+  assert.deepEqual(removed, [1, 2])
+  assert.equal(lifecycle.clearTracked(), true)
+  lifecycle.track(first)
+  lifecycle.dispose()
+  assert.deepEqual(removed, [1, 2, 1])
+  assert.equal(lifecycle.clearTracked(), false)
+})
+
 test('stop allows a fresh single loop until disposal', () => {
   const frames = createFrameQueue()
   const lifecycle = createHeroAnimationLifecycle(frames)

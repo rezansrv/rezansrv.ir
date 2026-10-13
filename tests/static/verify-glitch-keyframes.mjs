@@ -76,10 +76,8 @@ assert.match(animation, /infinite/, 'Glitch should continue repeating')
 const keyframeBlocks = [...compiledCss.matchAll(/@keyframes\s+([\w-]+)\s*\{/g)]
 const linkedKeyframe = keyframeBlocks.find(match => animation.split(/\s+/).includes(match[1]))
 assert.ok(linkedKeyframe, 'The headline animation shorthand should reference its compiled keyframes')
-let compiledKeyframes = null
 const linkedBlock = extractBlock(compiledCss.slice(linkedKeyframe.index), /^@keyframes\s+[\w-]+\s*\{/)
-compiledKeyframes = effectiveKeyframes(linkedBlock, false)
-assert.ok(compiledKeyframes, 'Compiled CSS should contain 101 effective glitch keyframes')
+const compiledKeyframes = effectiveKeyframes(linkedBlock, false)
 assert.equal(compiledKeyframes.size, 101, 'The headline-linked animation should have 101 effective frames')
 assert.deepEqual([...compiledKeyframes], [...legacyKeyframes], 'Compiled Nuxt keyframes must match effective legacy CSS')
 assert.deepEqual(compiledKeyframes.get(41), [50, 0, 0, 'blue', -50, 0, 0, 'lime'])

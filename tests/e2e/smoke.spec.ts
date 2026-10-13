@@ -66,6 +66,35 @@ async function openReadyPage(page: Page, route: typeof routes[number]) {
   return { consoleErrors, pageErrors }
 }
 
+async function installRafProbe(page: Page) {
+  await page.addInitScript(() => {
+    const probe = { callbacks: 0, cancellations: 0, pending: new Set<number>(), maxPending: 0 }
+    Object.defineProperty(window, '__heroRafProbe', { value: probe })
+    const request = window.requestAnimationFrame.bind(window)
+    const cancel = window.cancelAnimationFrame.bind(window)
+    window.requestAnimationFrame = (callback) => {
+      let handle = 0
+      handle = request((timestamp) => {
+        probe.pending.delete(handle)
+        probe.callbacks++
+        callback(timestamp)
+      })
+      probe.pending.add(handle)
+      probe.maxPending = Math.max(probe.maxPending, probe.pending.size)
+      return handle
+    }
+    window.cancelAnimationFrame = (handle) => {
+      probe.cancellations++
+      probe.pending.delete(handle)
+      cancel(handle)
+    }
+  })
+}
+
+async function pendingHeroFrames(page: Page) {
+  return page.evaluate(() => (window as Window & { __heroRafProbe: { pending: Set<number> } }).__heroRafProbe.pending.size)
+}
+
 for (const route of routes) {
   test(`${route.path} loads directly with its baseline content`, async ({ page }) => {
     const diagnostics = await openReadyPage(page, route)
@@ -158,6 +187,8 @@ test('header navigation changes routes without a full-page dependency', async ({
 })
 
 test('the home network is removed and rebuilt across route unmount and remount', async ({ page }, testInfo) => {
+  await installRafProbe(page)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
   const diagnostics = await openReadyPage(page, routes[0])
   const hero = page.locator('.hero__canvas')
   const expectedDots = testInfo.project.name === 'mobile-chromium' ? 150 : 120
@@ -171,6 +202,7 @@ test('the home network is removed and rebuilt across route unmount and remount',
   await expect(hero.locator('circle').first()).toHaveAttribute('fill', '#ADAAAA51')
   await expect(hero.locator('line').first()).toHaveAttribute('stroke', '#ADAAAA33')
   await expect(hero.locator('line').first()).toHaveAttribute('stroke-width', '1')
+  await expect.poll(() => pendingHeroFrames(page)).toBe(1)
   await expect.poll(() => hero.evaluate((svg) => {
     const circle = svg.querySelector('circle')
     const line = svg.querySelector('line')
@@ -184,6 +216,7 @@ test('the home network is removed and rebuilt across route unmount and remount',
   const header = page.getByRole('banner')
   await header.getByRole('link', { name: 'projects', exact: true }).click()
   await expect(page.locator('.hero__canvas')).toHaveCount(0)
+  await expect.poll(() => pendingHeroFrames(page)).toBe(0)
   await header.getByRole('link', { name: 'Home', exact: true }).click()
 
   const remountedHero = page.locator('.hero__canvas')
@@ -191,12 +224,25 @@ test('the home network is removed and rebuilt across route unmount and remount',
   await expect(remountedHero.locator('g[aria-hidden="true"]')).toHaveCount(1)
   await expect(remountedHero.locator('circle')).toHaveCount(expectedDots)
   await expect(remountedHero.locator('line')).toHaveCount(expectedLines)
+  await expect.poll(() => pendingHeroFrames(page)).toBe(1)
   await expect(page.getByText('I make things', { exact: true }).first()).toBeAttached()
+
+  for (let cycle = 0; cycle < 2; cycle++) {
+    await header.getByRole('link', { name: 'projects', exact: true }).click()
+    await expect(page.locator('.hero__canvas')).toHaveCount(0)
+    await expect.poll(() => pendingHeroFrames(page)).toBe(0)
+    await header.getByRole('link', { name: 'Home', exact: true }).click()
+    await expect(page.locator('.hero__canvas circle')).toHaveCount(expectedDots)
+    await expect(page.locator('.hero__canvas line')).toHaveCount(expectedLines)
+    await expect.poll(() => pendingHeroFrames(page)).toBe(1)
+  }
+
   expect(diagnostics.consoleErrors, 'Unexpected console or hydration errors after remount').toEqual([])
   expect(diagnostics.pageErrors, 'Unexpected runtime errors after remount').toEqual([])
 })
 
 test('the network moves its dots and line endpoints while preserving server-rendered hero text', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
   await openReadyPage(page, routes[0])
   const hero = page.locator('.hero__canvas')
   const firstDot = hero.locator('circle').first()
@@ -219,6 +265,7 @@ test('the network moves its dots and line endpoints while preserving server-rend
 })
 
 test('the hero preserves pointer influence, headline hover states, and keyboard focus', async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
   await openReadyPage(page, routes[0])
   const svg = page.locator('.hero__canvas')
   const headline = page.locator('.text-glitch')
@@ -268,6 +315,144 @@ test('the hero preserves pointer influence, headline hover states, and keyboard 
   await expect(headline).toHaveText('I make things')
   await expect(svg.locator('circle')).toHaveCount(expectedDots)
   await expect(svg.locator('line')).toHaveCount(testInfo.project.name === 'mobile-chromium' ? 750 : 720)
+})
+
+test('reduced motion starts with a static readable network and no recurring RAF', async ({ page }, testInfo) => {
+  await installRafProbe(page)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await openReadyPage(page, routes[0])
+  const headline = page.locator('.text-glitch')
+  const svg = page.locator('.hero__canvas')
+  await expect(headline).toHaveText('I make things')
+  await expect(headline).toBeVisible()
+  const expectedDots = testInfo.project.name === 'mobile-chromium' ? 150 : 120
+  await expect(svg.locator('circle')).toHaveCount(expectedDots)
+  await expect(svg.locator('line')).toHaveCount(testInfo.project.name === 'mobile-chromium' ? 750 : 720)
+  await expect(headline).toHaveCSS('animation-name', 'none')
+  await expect.poll(() => pendingHeroFrames(page)).toBe(0)
+
+  const before = await svg.locator('circle').first().getAttribute('cx')
+  const bounds = await svg.boundingBox()
+  expect(bounds).not.toBeNull()
+  await page.mouse.move(bounds!.x + 20, bounds!.y + 20)
+  await page.waitForTimeout(150)
+  await expect(svg.locator('circle').first()).toHaveAttribute('cx', before!)
+  await expect(svg.locator('circle[r="2"]')).toHaveCount(0)
+  await expect.poll(() => pendingHeroFrames(page)).toBe(0)
+})
+
+test('motion preference changes cancel and resume exactly one original animation loop', async ({ page }) => {
+  await installRafProbe(page)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await openReadyPage(page, routes[0])
+  const svg = page.locator('.hero__canvas')
+  const headline = page.locator('.text-glitch')
+  await expect.poll(() => pendingHeroFrames(page)).toBe(1)
+  await expect(headline).not.toHaveCSS('animation-name', 'none')
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(headline).toHaveCSS('animation-name', 'none')
+  await expect.poll(() => pendingHeroFrames(page)).toBe(0)
+  const frozenX = await svg.locator('circle').first().getAttribute('cx')
+  const callbacksAtPause = await page.evaluate(() => (window as Window & { __heroRafProbe: { callbacks: number } }).__heroRafProbe.callbacks)
+  await page.waitForTimeout(100)
+  await expect(svg.locator('circle').first()).toHaveAttribute('cx', frozenX!)
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect(headline).not.toHaveCSS('animation-name', 'none')
+  await expect.poll(() => pendingHeroFrames(page)).toBe(1)
+  await expect.poll(() => page.evaluate(() => (window as Window & { __heroRafProbe: { callbacks: number } }).__heroRafProbe.callbacks)).toBeGreaterThan(callbacksAtPause)
+  const probe = await page.evaluate(() => {
+    const state = (window as Window & { __heroRafProbe: { maxPending: number } }).__heroRafProbe
+    return state.maxPending
+  })
+  expect(probe).toBe(1)
+})
+
+test('visibility pauses and resumes one loop, composing with reduced motion', async ({ page }) => {
+  await installRafProbe(page)
+  await page.addInitScript(() => {
+    let visibility: DocumentVisibilityState = 'visible'
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visibility })
+    Object.defineProperty(window, '__setHeroVisibility', {
+      value: (value: DocumentVisibilityState) => {
+        visibility = value
+        document.dispatchEvent(new Event('visibilitychange'))
+      },
+    })
+  })
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await openReadyPage(page, routes[0])
+  await expect.poll(() => pendingHeroFrames(page)).toBe(1)
+
+  const setVisibility = (visibility: DocumentVisibilityState) => page.evaluate(value => {
+    (window as Window & { __setHeroVisibility: (value: DocumentVisibilityState) => void }).__setHeroVisibility(value)
+  }, visibility)
+  await setVisibility('hidden')
+  await expect.poll(() => pendingHeroFrames(page)).toBe(0)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(page.locator('.hero__canvas circle')).toHaveCount(150)
+  await expect(page.locator('.hero__canvas line')).toHaveCount(750)
+  await expect(page.locator('.hero__canvas')).toHaveAttribute('height', '764')
+  await expect.poll(() => pendingHeroFrames(page)).toBe(0)
+  await setVisibility('hidden')
+  await setVisibility('visible')
+  await expect.poll(() => pendingHeroFrames(page)).toBe(1)
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect.poll(() => pendingHeroFrames(page)).toBe(0)
+  await setVisibility('hidden')
+  await setVisibility('visible')
+  await expect.poll(() => pendingHeroFrames(page)).toBe(0)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect.poll(() => pendingHeroFrames(page)).toBe(1)
+  const maxPending = await page.evaluate(() => (window as Window & { __heroRafProbe: { maxPending: number } }).__heroRafProbe.maxPending)
+  expect(maxPending).toBe(1)
+})
+
+test('resizing rebuilds exact network configuration and keeps pointer interaction functional', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openReadyPage(page, routes[0])
+  const svg = page.locator('.hero__canvas')
+  await expect(svg.locator('circle')).toHaveCount(120)
+  await expect(svg.locator('line')).toHaveCount(720)
+
+  await page.setViewportSize({ width: 599, height: 844 })
+  await expect(svg.locator('circle')).toHaveCount(150)
+  await expect(svg.locator('line')).toHaveCount(750)
+  await expect(svg).toHaveAttribute('height', '764')
+  await expect(svg.locator('circle')).toHaveCount(150)
+
+  await page.setViewportSize({ width: 600, height: 844 })
+  await expect(svg.locator('circle')).toHaveCount(120)
+  await expect(svg.locator('line')).toHaveCount(720)
+  await expect(svg).toHaveAttribute('height', '764')
+
+  await page.setViewportSize({ width: 1200, height: 800 })
+  await expect(svg.locator('circle')).toHaveCount(120)
+  await expect(svg.locator('line')).toHaveCount(720)
+  await expect(svg).toHaveAttribute('height', '720')
+  const bounds = await svg.boundingBox()
+  expect(bounds).not.toBeNull()
+  await page.mouse.move(bounds!.x + 20, bounds!.y + 20)
+  await expect.poll(() => svg.locator('circle[r="2"]').count()).toBe(13)
+  const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
+  expect(hasHorizontalOverflow).toBe(false)
+})
+
+test('resize while reduced motion is active rebuilds a static network without starting RAF', async ({ page }) => {
+  await installRafProbe(page)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openReadyPage(page, routes[0])
+  const svg = page.locator('.hero__canvas')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(svg.locator('circle')).toHaveCount(150)
+  await expect(svg.locator('line')).toHaveCount(750)
+  await expect(svg).toHaveAttribute('height', '764')
+  await expect.poll(() => pendingHeroFrames(page)).toBe(0)
+  await expect(page.getByRole('heading', { name: 'I make things', exact: true })).toBeAttached()
 })
 
 test('layout follows the baseline desktop and mobile breakpoints', async ({ page }, testInfo) => {

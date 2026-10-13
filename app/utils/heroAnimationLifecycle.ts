@@ -38,6 +38,11 @@ export function createHeroAnimationLifecycle(options: HeroAnimationLifecycleOpti
     }
   }
 
+  const removeTracked = () => {
+    for (const element of generatedElements) element.remove()
+    generatedElements.clear()
+  }
+
   return {
     start(callback: () => void) {
       if (disposed || running) return false
@@ -60,6 +65,11 @@ export function createHeroAnimationLifecycle(options: HeroAnimationLifecycleOpti
       generatedElements.add(element)
       return true
     },
+    clearTracked() {
+      if (disposed) return false
+      removeTracked()
+      return true
+    },
     dispose() {
       if (disposed) return
       stop()
@@ -70,10 +80,7 @@ export function createHeroAnimationLifecycle(options: HeroAnimationLifecycleOpti
       }
       listeners.length = 0
 
-      for (const element of generatedElements) {
-        element.remove()
-      }
-      generatedElements.clear()
+      removeTracked()
       onFrame = null
     },
     get isRunning() {

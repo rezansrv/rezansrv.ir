@@ -17,7 +17,7 @@
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "typecheck": "nuxt typecheck",
-    "test:unit": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test tests/unit/heroAnimationLifecycle.test.ts tests/unit/heroNetwork.test.ts tests/unit/heroPointerInteraction.test.ts",
+    "test:unit": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test tests/unit/heroAnimationLifecycle.test.ts tests/unit/heroAnimationRunState.test.ts tests/unit/heroNetwork.test.ts tests/unit/heroPointerInteraction.test.ts",
     "test:generated": "node tests/static/verify-generated.mjs && node tests/static/verify-glitch-keyframes.mjs",
     "test:smoke": "npm run generate && npm run test:generated && npm run test:smoke:generated",
     "test:smoke:generated": "playwright test tests/e2e/smoke.spec.ts",

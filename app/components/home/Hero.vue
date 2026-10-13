@@ -40,6 +40,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { createHeroNetwork, type HeroNetwork } from '~/utils/heroNetwork'
 import { createHeroAnimationLifecycle } from '~/utils/heroAnimationLifecycle'
+import { createHeroAnimationRunState } from '~/utils/heroAnimationRunState'
 import { applyHeroPointerInteraction, createHeroPointerState } from '~/utils/heroPointerInteraction'
 
 const dynamicLayer = ref<SVGGElement | null>(null)
@@ -48,16 +49,21 @@ const displayText = ref('I make things')
 const isAlternateHeadline = ref(false)
 const pointer = createHeroPointerState()
 let lifecycle: ReturnType<typeof createHeroAnimationLifecycle> | null = null
+let runState: ReturnType<typeof createHeroAnimationRunState> | null = null
 let network: HeroNetwork | null = null
 let circles: SVGCircleElement[] = []
 let lines: SVGLineElement[] = []
+let latestClientPointer: { x: number; y: number } | null = null
+let resizeTimer: number | null = null
 
 const handleSvgMouseMove: EventListener = (event) => {
+  if (!runState?.isActive) return
   const svg = dynamicLayer.value?.ownerSVGElement
   if (!svg) return
 
   const mouseEvent = event as MouseEvent
   const bounds = svg.getBoundingClientRect()
+  latestClientPointer = { x: mouseEvent.clientX, y: mouseEvent.clientY }
   pointer.moving = true
   pointer.x = mouseEvent.clientX - bounds.left
   pointer.y = mouseEvent.clientY - bounds.top
@@ -83,36 +89,8 @@ onMounted(() => {
     cancelFrame: handle => window.cancelAnimationFrame(handle),
   })
 
-  const screenWidth = window.innerWidth - 10
-  const screenHeight = window.innerHeight - 80
   const svg = dynamicLayer.value.ownerSVGElement
   if (!svg) return
-
-  svg.setAttribute('height', String(screenHeight))
-  network = createHeroNetwork(window.innerWidth, screenWidth, screenHeight)
-
-  for (const dot of network.dots) {
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-    circle.setAttribute('cx', String(dot.x))
-    circle.setAttribute('cy', String(dot.y))
-    circle.setAttribute('r', String(dot.radius))
-    lifecycle.track(circle)
-    dynamicLayer.value.appendChild(circle)
-    circles.push(circle)
-
-    for (const line of dot.lines) {
-      const element = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-      element.setAttribute('x1', String(line.x1))
-      element.setAttribute('y1', String(line.y1))
-      element.setAttribute('x2', String(line.x2))
-      element.setAttribute('y2', String(line.y2))
-      element.setAttribute('stroke', 'rgba(0,255,255,0.00)')
-      element.setAttribute('stroke-width', '1')
-      lifecycle.track(element)
-      dynamicLayer.value.appendChild(element)
-      lines.push(element)
-    }
-  }
 
   const updateNetwork = () => {
     if (!network) return
@@ -140,10 +118,96 @@ onMounted(() => {
     applyHeroPointerInteraction(network.dots, pointer)
   }
 
-  // The legacy mounted sequence moves and draws once synchronously before RAF.
-  updateNetwork()
-  for (const circle of circles) circle.setAttribute('fill', '#ADAAAA51')
-  for (const line of lines) line.setAttribute('stroke', '#ADAAAA33')
+  let lastViewportWidth = Number.NaN
+  let lastViewportHeight = Number.NaN
+
+  const rebuildNetwork = () => {
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+    if (viewportWidth === lastViewportWidth && viewportHeight === lastViewportHeight) return false
+
+    lastViewportWidth = viewportWidth
+    lastViewportHeight = viewportHeight
+    pointer.moving = false
+    pointer.distances = []
+    lifecycle?.clearTracked()
+    circles = []
+    lines = []
+
+    const layer = dynamicLayer.value
+    if (!layer) return false
+
+    const screenWidth = viewportWidth - 10
+    const screenHeight = viewportHeight - 80
+    svg.setAttribute('height', String(screenHeight))
+    network = createHeroNetwork(viewportWidth, screenWidth, screenHeight)
+
+    for (const dot of network.dots) {
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+      circle.setAttribute('cx', String(dot.x))
+      circle.setAttribute('cy', String(dot.y))
+      circle.setAttribute('r', String(dot.radius))
+      lifecycle?.track(circle)
+      layer.appendChild(circle)
+      circles.push(circle)
+
+      for (const line of dot.lines) {
+        const element = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+        element.setAttribute('x1', String(line.x1))
+        element.setAttribute('y1', String(line.y1))
+        element.setAttribute('x2', String(line.x2))
+        element.setAttribute('y2', String(line.y2))
+        element.setAttribute('stroke', 'rgba(0,255,255,0.00)')
+        element.setAttribute('stroke-width', '1')
+        lifecycle?.track(element)
+        layer.appendChild(element)
+        lines.push(element)
+      }
+    }
+
+    // Preserve the legacy synchronous first update and style initialization.
+    updateNetwork()
+    for (const circle of circles) circle.setAttribute('fill', '#ADAAAA51')
+    for (const line of lines) line.setAttribute('stroke', '#ADAAAA33')
+
+    if (latestClientPointer && runState?.isActive) {
+      const bounds = svg.getBoundingClientRect()
+      pointer.x = latestClientPointer.x - bounds.left
+      pointer.y = latestClientPointer.y - bounds.top
+      pointer.moving = true
+    }
+    return true
+  }
+
+  const flushResize = () => {
+    if (resizeTimer !== null) {
+      window.clearTimeout(resizeTimer)
+      resizeTimer = null
+    }
+    rebuildNetwork()
+  }
+
+  const handleResize: EventListener = () => {
+    if (resizeTimer !== null) window.clearTimeout(resizeTimer)
+    resizeTimer = window.setTimeout(flushResize, 100)
+  }
+
+  const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  const handleMotionPreference: EventListener = (event) => {
+    const change = event as MediaQueryListEvent
+    if (change.matches) pointer.moving = false
+    runState?.setReducedMotion(change.matches)
+  }
+
+  const handleVisibilityChange: EventListener = () => {
+    const visible = document.visibilityState === 'visible'
+    if (visible && resizeTimer !== null) flushResize()
+    if (!visible) pointer.moving = false
+    runState?.setVisible(visible)
+  }
+
+  // Build one meaningful static network even when motion is reduced or the tab starts hidden.
+  rebuildNetwork()
   lifecycle.listen(svg, 'mousemove', handleSvgMouseMove)
   if (headline.value) {
     lifecycle.listen(headline.value, 'mouseover', handleHeadlineMouseOver)
@@ -151,15 +215,31 @@ onMounted(() => {
     lifecycle.listen(headline.value, 'focus', handleHeadlineMouseOver)
     lifecycle.listen(headline.value, 'blur', handleHeadlineMouseOut)
   }
-  lifecycle.start(updateNetwork)
+  lifecycle.listen(window, 'resize', handleResize)
+  lifecycle.listen(document, 'visibilitychange', handleVisibilityChange)
+  lifecycle.listen(mediaQuery, 'change', handleMotionPreference)
+
+  runState = createHeroAnimationRunState({
+    start: () => lifecycle?.start(updateNetwork),
+    stop: () => lifecycle?.stop(),
+  })
+  runState.setReducedMotion(mediaQuery.matches)
+  runState.setVisible(document.visibilityState === 'visible')
 })
 
 onUnmounted(() => {
+  if (resizeTimer !== null) {
+    window.clearTimeout(resizeTimer)
+    resizeTimer = null
+  }
+  runState?.dispose()
+  runState = null
   lifecycle?.dispose()
   lifecycle = null
   network = null
   circles = []
   lines = []
+  latestClientPointer = null
   pointer.moving = false
   pointer.distances = []
 })
@@ -218,6 +298,12 @@ $glitch-blue-lime-end: (1.4px, 2.1px, 2.8px, 1.8px, 0.8px, -0.2px, -1.2px, -2.2p
 .text-glitch:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text-glitch {
+    animation: none;
+  }
 }
 
 @media (max-width: 600px) {
