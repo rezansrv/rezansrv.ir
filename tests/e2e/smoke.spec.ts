@@ -218,6 +218,58 @@ test('the network moves its dots and line endpoints while preserving server-rend
   await expect(hero.locator('text')).toHaveText('I make things')
 })
 
+test('the hero preserves pointer influence, headline hover states, and keyboard focus', async ({ page }, testInfo) => {
+  await openReadyPage(page, routes[0])
+  const svg = page.locator('.hero__canvas')
+  const headline = page.locator('.text-glitch')
+  const expectedDots = testInfo.project.name === 'mobile-chromium' ? 150 : 120
+
+  await expect(headline).toHaveText('I make things')
+  await expect(headline).toHaveAttribute('role', 'button')
+  await expect(headline).toHaveAttribute('aria-pressed', 'false')
+  await expect(svg.locator('circle')).toHaveCount(expectedDots)
+  await expect(svg.locator('line')).toHaveCount(testInfo.project.name === 'mobile-chromium' ? 750 : 720)
+
+  const svgBounds = await svg.boundingBox()
+  expect(svgBounds).not.toBeNull()
+  await page.mouse.move(svgBounds!.x + 10, svgBounds!.y + 10)
+  await expect.poll(() => svg.locator('circle[r="2"]').count()).toBe(13)
+
+  const headlineBounds = await headline.boundingBox()
+  expect(headlineBounds).not.toBeNull()
+  await page.mouse.move(headlineBounds!.x + headlineBounds!.width / 2, headlineBounds!.y + headlineBounds!.height / 2)
+  await expect(headline).toHaveText('I break things')
+  await page.mouse.move(headlineBounds!.x + headlineBounds!.width / 2 + 3, headlineBounds!.y + headlineBounds!.height / 2)
+  await expect.poll(() => svg.locator('circle[r="2"]').count()).toBe(55)
+  await expect(headline).toHaveAttribute('aria-pressed', 'true')
+
+  await page.mouse.move(svgBounds!.x + 10, svgBounds!.y + 10)
+  await expect(headline).toHaveText('I make things')
+  await expect.poll(() => svg.locator('circle[r="2"]').count()).toBe(40)
+  await expect(headline).toHaveAttribute('aria-pressed', 'false')
+
+  let focused = false
+  for (let index = 0; index < 12 && !focused; index++) {
+    await page.keyboard.press('Tab')
+    focused = await headline.evaluate(element => element === document.activeElement)
+  }
+  await expect(headline).toBeFocused()
+  await expect(headline).toHaveText('I break things')
+  const focusStyle = await headline.evaluate(element => ({
+    focusVisible: element.matches(':focus-visible'),
+    outlineStyle: getComputedStyle(element).outlineStyle,
+    outlineWidth: getComputedStyle(element).outlineWidth,
+  }))
+  expect(focusStyle.focusVisible).toBe(true)
+  expect(focusStyle.outlineStyle).toBe('solid')
+  expect(focusStyle.outlineWidth).toBe('2px')
+  await page.keyboard.press('Tab')
+  await expect(headline).not.toBeFocused()
+  await expect(headline).toHaveText('I make things')
+  await expect(svg.locator('circle')).toHaveCount(expectedDots)
+  await expect(svg.locator('line')).toHaveCount(testInfo.project.name === 'mobile-chromium' ? 750 : 720)
+})
+
 test('layout follows the baseline desktop and mobile breakpoints', async ({ page }, testInfo) => {
   await openReadyPage(page, routes[1])
 
