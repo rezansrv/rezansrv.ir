@@ -53,6 +53,7 @@ for (const route of routes) {
     assert.ok(!/<svg[^>]*\bviewBox=/i.test(html), 'Hero SVG should retain the legacy viewport coordinate system')
     assert.match(html, /<g[^>]*aria-hidden="true"[^>]*><\/g>/, 'Generated home should include an empty isolated animation layer')
     assert.match(html, /<text[^>]*class="text-glitch"[^>]*>I make things<\/text>/, 'Generated home should contain the meaningful hero headline')
+    assert.ok(!/<(?:circle|line)\b/i.test(html), 'Generated home should defer the SVG network until client mount')
   }
 
   if (route.rowCount) {

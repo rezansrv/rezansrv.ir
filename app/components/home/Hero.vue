@@ -16,7 +16,7 @@
       aria-labelledby="hero-title hero-description"
     >
       <title id="hero-title">I make things</title>
-      <desc id="hero-description">A temporary static version of the original animated network hero.</desc>
+      <desc id="hero-description">An animated network of dots and connecting lines.</desc>
       <text
         class="text-glitch"
         x="50%"
@@ -33,10 +33,14 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
+import { createHeroNetwork, type HeroNetwork } from '~/utils/heroNetwork'
 import { createHeroAnimationLifecycle } from '~/utils/heroAnimationLifecycle'
 
 const dynamicLayer = ref<SVGGElement | null>(null)
 let lifecycle: ReturnType<typeof createHeroAnimationLifecycle> | null = null
+let network: HeroNetwork | null = null
+let circles: SVGCircleElement[] = []
+let lines: SVGLineElement[] = []
 
 onMounted(() => {
   if (!dynamicLayer.value) return
@@ -45,11 +49,73 @@ onMounted(() => {
     requestFrame: callback => window.requestAnimationFrame(callback),
     cancelFrame: handle => window.cancelAnimationFrame(handle),
   })
+
+  const screenWidth = window.innerWidth - 10
+  const screenHeight = window.innerHeight - 80
+  const svg = dynamicLayer.value.ownerSVGElement
+  if (!svg) return
+
+  svg.setAttribute('height', String(screenHeight))
+  network = createHeroNetwork(window.innerWidth, screenWidth, screenHeight)
+
+  for (const dot of network.dots) {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+    circle.setAttribute('cx', String(dot.x))
+    circle.setAttribute('cy', String(dot.y))
+    circle.setAttribute('r', String(dot.radius))
+    lifecycle.track(circle)
+    dynamicLayer.value.appendChild(circle)
+    circles.push(circle)
+
+    for (const line of dot.lines) {
+      const element = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+      element.setAttribute('x1', String(line.x1))
+      element.setAttribute('y1', String(line.y1))
+      element.setAttribute('x2', String(line.x2))
+      element.setAttribute('y2', String(line.y2))
+      element.setAttribute('stroke', 'rgba(0,255,255,0.00)')
+      element.setAttribute('stroke-width', '1')
+      lifecycle.track(element)
+      dynamicLayer.value.appendChild(element)
+      lines.push(element)
+    }
+  }
+
+  const updateNetwork = () => {
+    if (!network) return
+
+    network.step()
+    let lineIndex = 0
+    for (let dotIndex = 0; dotIndex < network.dots.length; dotIndex++) {
+      const dot = network.dots[dotIndex]!
+      const circle = circles[dotIndex]!
+      circle.setAttribute('cx', String(dot.x))
+      circle.setAttribute('cy', String(dot.y))
+      circle.setAttribute('r', String(dot.radius))
+
+      for (const line of dot.lines) {
+        const element = lines[lineIndex++]!
+        element.setAttribute('x1', String(line.x1))
+        element.setAttribute('y1', String(line.y1))
+        element.setAttribute('x2', String(line.x2))
+        element.setAttribute('y2', String(line.y2))
+      }
+    }
+  }
+
+  // The legacy mounted sequence moves and draws once synchronously before RAF.
+  updateNetwork()
+  for (const circle of circles) circle.setAttribute('fill', '#ADAAAA51')
+  for (const line of lines) line.setAttribute('stroke', '#ADAAAA33')
+  lifecycle.start(updateNetwork)
 })
 
 onUnmounted(() => {
   lifecycle?.dispose()
   lifecycle = null
+  network = null
+  circles = []
+  lines = []
 })
 </script>
 
@@ -66,7 +132,7 @@ onUnmounted(() => {
 
 .hero__canvas {
   width: 100%;
-  height: 100%;
+  height: 90vh;
 }
 
 .text-glitch {

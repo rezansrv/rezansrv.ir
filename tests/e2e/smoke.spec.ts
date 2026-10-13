@@ -157,12 +157,29 @@ test('header navigation changes routes without a full-page dependency', async ({
   expect(diagnostics.pageErrors, 'Unexpected runtime errors during internal navigation').toEqual([])
 })
 
-test('the home animation layer remains isolated across route unmount and remount', async ({ page }) => {
+test('the home network is removed and rebuilt across route unmount and remount', async ({ page }, testInfo) => {
   const diagnostics = await openReadyPage(page, routes[0])
   const hero = page.locator('.hero__canvas')
+  const expectedDots = testInfo.project.name === 'mobile-chromium' ? 150 : 120
+  const expectedLines = testInfo.project.name === 'mobile-chromium' ? 750 : 720
 
   await expect(hero.locator('g[aria-hidden="true"]')).toHaveCount(1)
-  await expect(hero.locator('circle, line')).toHaveCount(0)
+  await expect(hero.locator('circle')).toHaveCount(expectedDots)
+  await expect(hero.locator('line')).toHaveCount(expectedLines)
+  await expect(hero).not.toHaveAttribute('viewBox', /.+/)
+  await expect(hero).toHaveAttribute('height', String(testInfo.project.name === 'mobile-chromium' ? 764 : 820))
+  await expect(hero.locator('circle').first()).toHaveAttribute('fill', '#ADAAAA51')
+  await expect(hero.locator('line').first()).toHaveAttribute('stroke', '#ADAAAA33')
+  await expect(hero.locator('line').first()).toHaveAttribute('stroke-width', '1')
+  await expect.poll(() => hero.evaluate((svg) => {
+    const circle = svg.querySelector('circle')
+    const line = svg.querySelector('line')
+    return circle && line
+      && line.getAttribute('x1') === circle.getAttribute('cx')
+      && line.getAttribute('y1') === circle.getAttribute('cy')
+      && line.getAttribute('x2') === circle.getAttribute('cx')
+      && line.getAttribute('y2') === circle.getAttribute('cy')
+  })).toBe(true)
 
   const header = page.getByRole('banner')
   await header.getByRole('link', { name: 'projects', exact: true }).click()
@@ -172,10 +189,33 @@ test('the home animation layer remains isolated across route unmount and remount
   const remountedHero = page.locator('.hero__canvas')
   await expect(remountedHero).toHaveCount(1)
   await expect(remountedHero.locator('g[aria-hidden="true"]')).toHaveCount(1)
-  await expect(remountedHero.locator('circle, line')).toHaveCount(0)
+  await expect(remountedHero.locator('circle')).toHaveCount(expectedDots)
+  await expect(remountedHero.locator('line')).toHaveCount(expectedLines)
   await expect(page.getByText('I make things', { exact: true }).first()).toBeAttached()
   expect(diagnostics.consoleErrors, 'Unexpected console or hydration errors after remount').toEqual([])
   expect(diagnostics.pageErrors, 'Unexpected runtime errors after remount').toEqual([])
+})
+
+test('the network moves its dots and line endpoints while preserving server-rendered hero text', async ({ page }) => {
+  await openReadyPage(page, routes[0])
+  const hero = page.locator('.hero__canvas')
+  const firstDot = hero.locator('circle').first()
+  const firstLine = hero.locator('line').nth(1)
+  const initial = await Promise.all([
+    firstDot.getAttribute('cx'),
+    firstDot.getAttribute('cy'),
+    firstLine.getAttribute('x2'),
+    firstLine.getAttribute('y2'),
+  ])
+
+  await expect.poll(async () => Promise.all([
+    firstDot.getAttribute('cx'),
+    firstDot.getAttribute('cy'),
+    firstLine.getAttribute('x2'),
+    firstLine.getAttribute('y2'),
+  ]), { timeout: 3_000 }).not.toEqual(initial)
+  await expect(page.getByRole('heading', { name: 'I make things', exact: true })).toBeAttached()
+  await expect(hero.locator('text')).toHaveText('I make things')
 })
 
 test('layout follows the baseline desktop and mobile breakpoints', async ({ page }, testInfo) => {
