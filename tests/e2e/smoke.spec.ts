@@ -157,6 +157,27 @@ test('header navigation changes routes without a full-page dependency', async ({
   expect(diagnostics.pageErrors, 'Unexpected runtime errors during internal navigation').toEqual([])
 })
 
+test('the home animation layer remains isolated across route unmount and remount', async ({ page }) => {
+  const diagnostics = await openReadyPage(page, routes[0])
+  const hero = page.locator('.hero__canvas')
+
+  await expect(hero.locator('g[aria-hidden="true"]')).toHaveCount(1)
+  await expect(hero.locator('circle, line')).toHaveCount(0)
+
+  const header = page.getByRole('banner')
+  await header.getByRole('link', { name: 'projects', exact: true }).click()
+  await expect(page.locator('.hero__canvas')).toHaveCount(0)
+  await header.getByRole('link', { name: 'Home', exact: true }).click()
+
+  const remountedHero = page.locator('.hero__canvas')
+  await expect(remountedHero).toHaveCount(1)
+  await expect(remountedHero.locator('g[aria-hidden="true"]')).toHaveCount(1)
+  await expect(remountedHero.locator('circle, line')).toHaveCount(0)
+  await expect(page.getByText('I make things', { exact: true }).first()).toBeAttached()
+  expect(diagnostics.consoleErrors, 'Unexpected console or hydration errors after remount').toEqual([])
+  expect(diagnostics.pageErrors, 'Unexpected runtime errors after remount').toEqual([])
+})
+
 test('layout follows the baseline desktop and mobile breakpoints', async ({ page }, testInfo) => {
   await openReadyPage(page, routes[1])
 

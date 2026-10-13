@@ -12,10 +12,8 @@
     </h2>
     <svg
       class="hero__canvas"
-      viewBox="0 0 1440 810"
       role="img"
       aria-labelledby="hero-title hero-description"
-      preserveAspectRatio="xMidYMid slice"
     >
       <title id="hero-title">I make things</title>
       <desc id="hero-description">A temporary static version of the original animated network hero.</desc>
@@ -25,9 +23,35 @@
         y="50%"
         text-anchor="middle"
       >I make things</text>
+      <g
+        ref="dynamicLayer"
+        aria-hidden="true"
+      />
     </svg>
   </section>
 </template>
+
+<script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue'
+import { createHeroAnimationLifecycle } from '~/utils/heroAnimationLifecycle'
+
+const dynamicLayer = ref<SVGGElement | null>(null)
+let lifecycle: ReturnType<typeof createHeroAnimationLifecycle> | null = null
+
+onMounted(() => {
+  if (!dynamicLayer.value) return
+
+  lifecycle = createHeroAnimationLifecycle({
+    requestFrame: callback => window.requestAnimationFrame(callback),
+    cancelFrame: handle => window.cancelAnimationFrame(handle),
+  })
+})
+
+onUnmounted(() => {
+  lifecycle?.dispose()
+  lifecycle = null
+})
+</script>
 
 <style scoped>
 .hero {
@@ -56,7 +80,7 @@
 
 @media (max-width: 600px) {
   .text-glitch {
-    font-size: 12.25vw;
+    font-size: 11.5vw;
   }
 }
 

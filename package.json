@@ -17,10 +17,11 @@
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "typecheck": "nuxt typecheck",
+    "test:unit": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test tests/unit/heroAnimationLifecycle.test.ts",
     "test:generated": "node tests/static/verify-generated.mjs",
     "test:smoke": "npm run generate && npm run test:generated && npm run test:smoke:generated",
     "test:smoke:generated": "playwright test tests/e2e/smoke.spec.ts",
-    "validate": "npm run lint && npm run typecheck && npm run build && npm run generate && npm run test:generated && npm run test:smoke:generated"
+    "validate": "npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run generate && npm run test:generated && npm run test:smoke:generated"
   },
   "dependencies": {
     "animate.css": "4.1.1",

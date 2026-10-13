@@ -48,6 +48,13 @@ for (const route of routes) {
     assert.ok(html.includes(content), `${route.path} should render ${content}`)
   }
 
+  if (route.path === '/') {
+    assert.match(html, /<svg[^>]*class="hero__canvas"/, 'Generated home should contain the SSR hero SVG')
+    assert.ok(!/<svg[^>]*\bviewBox=/i.test(html), 'Hero SVG should retain the legacy viewport coordinate system')
+    assert.match(html, /<g[^>]*aria-hidden="true"[^>]*><\/g>/, 'Generated home should include an empty isolated animation layer')
+    assert.match(html, /<text[^>]*class="text-glitch"[^>]*>I make things<\/text>/, 'Generated home should contain the meaningful hero headline')
+  }
+
   if (route.rowCount) {
     const rows = html.match(/<tr(?:\s|>)/g) || []
     assert.equal(rows.length, route.rowCount, `${route.path} should render ${route.rowCount} content rows`)
