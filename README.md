@@ -1,61 +1,68 @@
-# rezansrv.ir
+# Reza Naserivand — Personal Website
+
+Source code for [rezansrv.ir](https://rezansrv.ir), a statically generated personal website built with Nuxt 4 and Vue 3.
+
+The site includes the public routes `/`, `/projects`, and `/writing`, server-rendered SEO metadata, structured data, a sitemap, responsive layouts, and an animated hero with reduced-motion support.
 
 ## Requirements
 
-- Node.js 24.21.0
-- npm 11.x
+- Node.js 24.21.0 or a compatible Node.js 24 LTS release
+- npm 11.19.0
 
-## Project setup
+The supported versions are also recorded in `.nvmrc` and `package.json`.
 
-```
+## Local development
+
+Install the locked dependencies:
+
+```sh
 npm ci
 ```
 
-### Starts Nuxt in development mode
+Start the Nuxt development server:
 
-```
+```sh
 npm run dev
 ```
 
-### Builds the universal application
+## Available scripts
 
-```
-npm run build
-```
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the local Nuxt development server. |
+| `npm run lint` | Run ESLint. |
+| `npm run typecheck` | Run Nuxt and Vue TypeScript checks. |
+| `npm run test:unit` | Run the hero animation and interaction unit tests. |
+| `npm run build` | Build the universal Nuxt application. |
+| `npm run generate` | Prerender the static website into `.output/public`. |
+| `npm run test:generated` | Validate generated HTML, SEO output, routes, and glitch keyframes. |
+| `npm run test:smoke` | Generate the site and run the complete Playwright smoke suite. |
+| `npm run test:smoke:generated` | Run Playwright against existing generated output. |
+| `npm run preview` | Preview a production Nuxt build locally. |
+| `npm run validate` | Run the complete local quality gate. |
 
-### Generates the static Cloudflare Pages artifact
+## Validation
 
-The deployable files are written to `.output/public`.
+Run the full validation workflow before proposing a release:
 
-```
-npm run generate
-```
-
-### Previews a Nuxt build
-
-```
-npm run preview
-```
-
-### Lints and type-checks files
-
-```
-npm run lint
-npm run typecheck
-```
-
-### Runs browser smoke tests
-
-The smoke suite generates the site, serves `.output/public` with the repository test server, and checks the public routes in desktop and mobile Chromium projects.
-
-```
-npm run test:smoke
-```
-
-### Runs the local validation workflow
-
-```
+```sh
 npm run validate
 ```
 
-This runs linting, type checking, the production build, static generation, generated-HTML checks, and the Playwright smoke suite.
+This runs linting, type checking, unit tests, the production build, static generation, generated-output checks, and Playwright browser tests.
+
+## Static deployment
+
+Generate the deployable artifact with:
+
+```sh
+npm run generate
+```
+
+The static output directory is:
+
+```text
+.output/public
+```
+
+Generated build output and installed dependencies are local artifacts and must not be committed.
