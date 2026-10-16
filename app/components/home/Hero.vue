@@ -2,6 +2,7 @@
   <section
     ref="heroSection"
     class="hero"
+    :class="{ 'hero--ios-scroll-paused': iosScrollPaused }"
     style="background-image: url('/images/backGround.jpg')"
     aria-labelledby="hero-heading"
   >
@@ -47,6 +48,7 @@ import { applyHeroPointerInteraction, createHeroPointerState } from '~/utils/her
 const dynamicLayer = ref<SVGGElement | null>(null)
 const heroSection = ref<HTMLElement | null>(null)
 const headline = ref<SVGTextElement | null>(null)
+const iosScrollPaused = ref(false)
 const displayText = ref('I make things')
 const isAlternateHeadline = ref(false)
 const pointer = createHeroPointerState()
@@ -57,6 +59,7 @@ let circles: SVGCircleElement[] = []
 let lines: SVGLineElement[] = []
 let latestClientPointer: { x: number; y: number } | null = null
 let resizeTimer: number | null = null
+let iosResumeTimer: number | null = null
 let visibilityObserver: IntersectionObserver | null = null
 
 const handleSvgMouseMove: EventListener = (event) => {
@@ -95,6 +98,50 @@ onMounted(() => {
   const svg = dynamicLayer.value.ownerSVGElement
   if (!svg) return
   const coarsePointerQuery = window.matchMedia('(pointer: coarse)')
+  const isIOSRuntime = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  let touchIsActive = false
+
+  const clearIOSResumeTimer = () => {
+    if (iosResumeTimer === null) return
+    window.clearTimeout(iosResumeTimer)
+    iosResumeTimer = null
+  }
+
+  const setIOSScrollPaused = (paused: boolean) => {
+    if (!isIOSRuntime) return
+    iosScrollPaused.value = paused
+    if (paused) pointer.moving = false
+    runState?.setInteractionPaused(paused)
+  }
+
+  const scheduleIOSResumeAfterScroll = () => {
+    clearIOSResumeTimer()
+    if (touchIsActive) return
+
+    iosResumeTimer = window.setTimeout(() => {
+      iosResumeTimer = null
+      if (!touchIsActive) setIOSScrollPaused(false)
+    }, 250)
+  }
+
+  const handleIOSPointerDown: EventListener = (event) => {
+    if ((event as PointerEvent).pointerType !== 'touch') return
+    touchIsActive = true
+    clearIOSResumeTimer()
+    setIOSScrollPaused(true)
+  }
+
+  const handleIOSPointerEnd: EventListener = (event) => {
+    if ((event as PointerEvent).pointerType !== 'touch') return
+    touchIsActive = false
+    scheduleIOSResumeAfterScroll()
+  }
+
+  const handleIOSScroll = () => {
+    setIOSScrollPaused(true)
+    scheduleIOSResumeAfterScroll()
+  }
 
   const updateNetwork = () => {
     if (!network) return
@@ -241,16 +288,23 @@ onMounted(() => {
   runState.setReducedMotion(mediaQuery.matches)
   runState.setVisible(document.visibilityState === 'visible')
 
+  if (isIOSRuntime) {
+    lifecycle.listen(window, 'pointerdown', handleIOSPointerDown)
+    lifecycle.listen(window, 'pointerup', handleIOSPointerEnd)
+    lifecycle.listen(window, 'pointercancel', handleIOSPointerEnd)
+    lifecycle.listen(window, 'scroll', handleIOSScroll)
+    setIOSScrollPaused(false)
+  }
+
   if ('IntersectionObserver' in window && heroSection.value) {
     visibilityObserver = new IntersectionObserver(([entry]) => {
       if (!entry) return
 
       const enoughHeroIsVisible = entry.isIntersecting
-        && (!coarsePointerQuery.matches || entry.intersectionRatio >= 0.35)
       if (!enoughHeroIsVisible) pointer.moving = false
       runState?.setInViewport(enoughHeroIsVisible)
     }, {
-      threshold: coarsePointerQuery.matches ? [0, 0.35, 1] : [0, 1],
+      threshold: [0, 1],
     })
     visibilityObserver.observe(heroSection.value)
   }
@@ -259,6 +313,10 @@ onMounted(() => {
 onUnmounted(() => {
   visibilityObserver?.disconnect()
   visibilityObserver = null
+  if (iosResumeTimer !== null) {
+    window.clearTimeout(iosResumeTimer)
+    iosResumeTimer = null
+  }
   if (resizeTimer !== null) {
     window.clearTimeout(resizeTimer)
     resizeTimer = null
@@ -337,6 +395,10 @@ $glitch-blue-lime-end: (1.4px, 2.1px, 2.8px, 1.8px, 0.8px, -0.2px, -1.2px, -2.2p
   font-weight: bold;
   text-transform: uppercase;
   animation: glitch 2s steps(100) infinite;
+}
+
+.hero--ios-scroll-paused .text-glitch {
+  animation-play-state: paused;
 }
 
 .text-glitch:focus-visible {
