@@ -2,47 +2,37 @@
   "name": "psite",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
+  "packageManager": "npm@11.19.0",
+  "engines": {
+    "node": ">=24.21.0 <25",
+    "npm": ">=11.19.0 <12"
+  },
   "scripts": {
-    "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "typecheck": "nuxt typecheck",
+    "test:unit": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test tests/unit/heroAnimationLifecycle.test.ts tests/unit/heroAnimationRunState.test.ts tests/unit/heroNetwork.test.ts tests/unit/heroPointerInteraction.test.ts",
+    "test:generated": "node tests/static/verify-generated.mjs && node tests/static/verify-glitch-keyframes.mjs",
+    "test:smoke": "npm run generate && npm run test:generated && npm run test:smoke:generated",
+    "test:smoke:generated": "playwright test tests/e2e/smoke.spec.ts",
+    "validate": "npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run generate && npm run test:generated && npm run test:smoke:generated"
   },
   "dependencies": {
-    "animate.css": "^4.1.1",
-    "core-js": "^3.8.3",
-    "hammerjs": "^2.0.8",
-    "sass": "^1.80.4",
-    "vue": "^2.6.14",
-    "vue-router": "^3.6.5"
+    "nuxt": "4.6.1",
+    "vue": "3.5.43",
+    "vue-router": "5.3.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.12.16",
-    "@babel/eslint-parser": "^7.12.16",
-    "@vue/cli-plugin-babel": "~5.0.0",
-    "@vue/cli-plugin-eslint": "~5.0.0",
-    "@vue/cli-service": "~5.0.0",
-    "eslint": "^7.32.0",
-    "eslint-plugin-vue": "^8.0.3",
-    "sass-loader": "^13.3.3",
-    "vue-template-compiler": "^2.6.14"
-  },
-  "eslintConfig": {
-    "root": true,
-    "env": {
-      "node": true
-    },
-    "extends": [
-      "plugin:vue/essential",
-      "eslint:recommended"
-    ],
-    "parserOptions": {
-      "parser": "@babel/eslint-parser"
-    },
-    "rules": {}
-  },
-  "browserslist": [
-    "> 1%",
-    "last 2 versions",
-    "not dead"
-  ]
+    "@nuxt/eslint": "1.17.0",
+    "@playwright/test": "1.64.0",
+    "eslint": "10.12.0",
+    "sass": "1.80.4",
+    "typescript": "6.0.3",
+    "vue-tsc": "3.3.12"
+  }
 }
