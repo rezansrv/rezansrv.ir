@@ -56,10 +56,38 @@ function effectiveKeyframes(block, strict = true) {
   return frames
 }
 
-const legacyPath = resolve(process.cwd(), 'src/components/home/GlitchApp.vue')
-const legacySource = readFileSync(legacyPath, 'utf8')
-const legacyKeyframes = effectiveKeyframes(extractBlock(legacySource, /@keyframes\s+glitch\s*\{/))
-assert.equal(legacyKeyframes.size, 101, 'Legacy source should declare all 101 percentages')
+function approvedShadow(offset, firstColor, secondColor) {
+  return [offset, 0, 0, firstColor, offset === 0 ? 0 : -offset, 0, 0, secondColor]
+}
+
+const approvedKeyframes = new Map()
+const addFrame = (percentage, offset, firstColor, secondColor) => {
+  approvedKeyframes.set(percentage, approvedShadow(offset, firstColor, secondColor))
+}
+const addSegment = (start, offsets, firstColor, secondColor) => {
+  offsets.forEach((offset, index) => addFrame(start + index, offset, firstColor, secondColor))
+}
+
+addSegment(0, [1, 2, 3, 4, 5, 4, 3, 2, 1, 0, -1], 'red', 'blue')
+addSegment(11, [0.5, 1, 1.5, 2, 2.5, 1.5, 0.5, -0.5, -1.5, -2.5], 'red', 'lime')
+addSegment(21, [0.7, 1.4, 2.1, 2.8, 3.5, 4.2, 4.9, 5.6, 6.3, 7], 'blue', 'lime')
+addSegment(31, [6, 5, 4, 3, 2, 1, 0, -1, -2, -3], 'blue', 'lime')
+addFrame(41, 50, 'blue', 'lime')
+addFrame(42, 0, 'blue', 'lime')
+addSegment(43, [0.5, 1, 1.5, 2, 1, 0, -1, -2], 'red', 'lime')
+addSegment(51, [1, 2, 3, 4, 5, 4, 3, 2, 1, 0], 'red', 'blue')
+addFrame(61, 30, 'red', 'lime')
+addFrame(62, 0, 'red', 'lime')
+addSegment(63, [0.5, 1, 1.5, 2, 1, 0, -1, -2], 'red', 'blue')
+addFrame(71, 70, 'red', 'blue')
+addFrame(72, 0, 'red', 'blue')
+addSegment(73, [1, 2, 3, 4, 3, 2, 1, 0], 'red', 'blue')
+addSegment(81, [0.5, 1, 1.5, 2, 2.5, 1.5, 0.5, -0.5, -1.5, -2.5], 'red', 'lime')
+addFrame(91, 60, 'lime', 'blue')
+addFrame(92, 0, 'lime', 'blue')
+addFrame(92, 0.7, 'blue', 'lime')
+addSegment(93, [1.4, 2.1, 2.8, 1.8, 0.8, -0.2, -1.2, -2.2], 'blue', 'lime')
+assert.equal(approvedKeyframes.size, 101, 'Approved glitch baseline should cover all percentages')
 
 const cssRoot = resolve(process.cwd(), '.output/public/_nuxt')
 const cssFiles = readdirSync(cssRoot).filter(file => file.endsWith('.css'))
@@ -79,11 +107,11 @@ assert.ok(linkedKeyframe, 'The headline animation shorthand should reference its
 const linkedBlock = extractBlock(compiledCss.slice(linkedKeyframe.index), /^@keyframes\s+[\w-]+\s*\{/)
 const compiledKeyframes = effectiveKeyframes(linkedBlock, false)
 assert.equal(compiledKeyframes.size, 101, 'The headline-linked animation should have 101 effective frames')
-assert.deepEqual([...compiledKeyframes], [...legacyKeyframes], 'Compiled Nuxt keyframes must match effective legacy CSS')
+assert.deepEqual([...compiledKeyframes], [...approvedKeyframes], 'Compiled Nuxt keyframes must match the approved baseline')
 assert.deepEqual(compiledKeyframes.get(41), [50, 0, 0, 'blue', -50, 0, 0, 'lime'])
 assert.deepEqual(compiledKeyframes.get(61), [30, 0, 0, 'red', -30, 0, 0, 'lime'])
 assert.deepEqual(compiledKeyframes.get(71), [70, 0, 0, 'red', -70, 0, 0, 'blue'])
 assert.deepEqual(compiledKeyframes.get(91), [60, 0, 0, 'lime', -60, 0, 0, 'blue'])
 assert.deepEqual(compiledKeyframes.get(92), [0.7, 0, 0, 'blue', -0.7, 0, 0, 'lime'])
 
-process.stdout.write('Compiled Nuxt glitch keyframes match all effective legacy declarations (0%-100%).\n')
+process.stdout.write('Compiled Nuxt glitch keyframes match the approved 0%-100% baseline.\n')

@@ -8,7 +8,6 @@ export default withNuxt(
       'dist/**',
       'node_modules/**',
       'phase0-evidence/**',
-      'src/**',
     ],
   },
 )

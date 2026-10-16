@@ -10,7 +10,6 @@
   },
   "scripts": {
     "dev": "nuxt dev",
-    "serve": "nuxt dev",
     "build": "nuxt build",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
@@ -24,7 +23,6 @@
     "validate": "npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run generate && npm run test:generated && npm run test:smoke:generated"
   },
   "dependencies": {
-    "animate.css": "4.1.1",
     "nuxt": "4.6.0",
     "vue": "3.5.43",
     "vue-router": "5.3.1"
