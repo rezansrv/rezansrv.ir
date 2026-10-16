@@ -575,6 +575,28 @@ test('resizing rebuilds exact network configuration and keeps pointer interactio
   expect(hasHorizontalOverflow).toBe(false)
 })
 
+test('mobile hero preserves native scrolling during browser-chrome height resizes', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile-chromium')
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await openReadyPage(page, routes[0])
+
+  const svg = page.locator('.hero__canvas')
+  const firstCircle = await svg.locator('circle').first().elementHandle()
+  const initialSvgHeight = await svg.getAttribute('height')
+  expect(firstCircle).not.toBeNull()
+  await expect(svg).toHaveCSS('touch-action', 'pan-y pinch-zoom')
+
+  // A mobile address bar opening or closing changes only the viewport height.
+  // The existing network must remain mounted so the gesture is not disrupted.
+  await page.setViewportSize({ width: 390, height: 700 })
+  await page.waitForTimeout(150)
+  expect(await firstCircle!.evaluate(element => element.isConnected)).toBe(true)
+  await expect(svg).toHaveAttribute('height', initialSvgHeight!)
+
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+})
+
 test('resize while reduced motion is active rebuilds a static network without starting RAF', async ({ page }) => {
   await installRafProbe(page)
   await page.emulateMedia({ reducedMotion: 'reduce' })
