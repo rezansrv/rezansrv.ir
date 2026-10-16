@@ -326,25 +326,25 @@ test('the home network is removed and rebuilt across route unmount and remount',
   const diagnostics = await openReadyPage(page, routes[0])
   const hero = page.locator('.hero__canvas')
   const expectedDots = testInfo.project.name === 'mobile-chromium' ? 150 : 120
-  const expectedLines = testInfo.project.name === 'mobile-chromium' ? 750 : 720
+  const expectedLinePaths = expectedDots
 
   await expect(hero.locator('g[aria-hidden="true"]')).toHaveCount(1)
   await expect(hero.locator('circle')).toHaveCount(expectedDots)
-  await expect(hero.locator('line')).toHaveCount(expectedLines)
+  await expect(hero.locator('.hero__network-lines')).toHaveCount(expectedLinePaths)
+  await expect(hero.locator('line')).toHaveCount(0)
   await expect(hero).not.toHaveAttribute('viewBox', /.+/)
   await expect(hero).toHaveAttribute('height', String(testInfo.project.name === 'mobile-chromium' ? 764 : 820))
   await expect(hero.locator('circle').first()).toHaveAttribute('fill', '#ADAAAA51')
-  await expect(hero.locator('line').first()).toHaveAttribute('stroke', '#ADAAAA33')
-  await expect(hero.locator('line').first()).toHaveAttribute('stroke-width', '1')
+  await expect(hero.locator('.hero__network-lines').first()).toHaveAttribute('stroke', '#ADAAAA33')
+  await expect(hero.locator('.hero__network-lines').first()).toHaveAttribute('stroke-width', '1')
+  await expect(hero.locator('.hero__network-lines').first()).toHaveAttribute('fill', 'none')
   await expect.poll(() => pendingHeroFrames(page)).toBe(1)
   await expect.poll(() => hero.evaluate((svg) => {
     const circle = svg.querySelector('circle')
-    const line = svg.querySelector('line')
-    return circle && line
-      && line.getAttribute('x1') === circle.getAttribute('cx')
-      && line.getAttribute('y1') === circle.getAttribute('cy')
-      && line.getAttribute('x2') === circle.getAttribute('cx')
-      && line.getAttribute('y2') === circle.getAttribute('cy')
+    const path = svg.querySelector('.hero__network-lines')
+    const x = circle?.getAttribute('cx')
+    const y = circle?.getAttribute('cy')
+    return Boolean(circle && path && path.getAttribute('d')?.startsWith(`M${x} ${y}L${x} ${y}`))
   })).toBe(true)
 
   const header = page.getByRole('banner')
@@ -357,7 +357,7 @@ test('the home network is removed and rebuilt across route unmount and remount',
   await expect(remountedHero).toHaveCount(1)
   await expect(remountedHero.locator('g[aria-hidden="true"]')).toHaveCount(1)
   await expect(remountedHero.locator('circle')).toHaveCount(expectedDots)
-  await expect(remountedHero.locator('line')).toHaveCount(expectedLines)
+  await expect(remountedHero.locator('.hero__network-lines')).toHaveCount(expectedLinePaths)
   await expect.poll(() => pendingHeroFrames(page)).toBe(1)
   await expect(page.getByText('I make things', { exact: true }).first()).toBeAttached()
 
@@ -367,7 +367,7 @@ test('the home network is removed and rebuilt across route unmount and remount',
     await expect.poll(() => pendingHeroFrames(page)).toBe(0)
     await header.getByRole('link', { name: 'Home', exact: true }).click()
     await expect(page.locator('.hero__canvas circle')).toHaveCount(expectedDots)
-    await expect(page.locator('.hero__canvas line')).toHaveCount(expectedLines)
+    await expect(page.locator('.hero__canvas .hero__network-lines')).toHaveCount(expectedLinePaths)
     await expect.poll(() => pendingHeroFrames(page)).toBe(1)
   }
 
@@ -380,19 +380,17 @@ test('the network moves its dots and line endpoints while preserving server-rend
   await openReadyPage(page, routes[0])
   const hero = page.locator('.hero__canvas')
   const firstDot = hero.locator('circle').first()
-  const firstLine = hero.locator('line').nth(1)
+  const firstLinePath = hero.locator('.hero__network-lines').first()
   const initial = await Promise.all([
     firstDot.getAttribute('cx'),
     firstDot.getAttribute('cy'),
-    firstLine.getAttribute('x2'),
-    firstLine.getAttribute('y2'),
+    firstLinePath.getAttribute('d'),
   ])
 
   await expect.poll(async () => Promise.all([
     firstDot.getAttribute('cx'),
     firstDot.getAttribute('cy'),
-    firstLine.getAttribute('x2'),
-    firstLine.getAttribute('y2'),
+    firstLinePath.getAttribute('d'),
   ]), { timeout: 3_000 }).not.toEqual(initial)
   await expect(page.getByRole('heading', { name: 'I make things', exact: true })).toBeAttached()
   await expect(hero.locator('text')).toHaveText('I make things')
@@ -409,7 +407,7 @@ test('the hero preserves pointer influence, headline hover states, and keyboard 
   await expect(headline).toHaveAttribute('role', 'button')
   await expect(headline).toHaveAttribute('aria-pressed', 'false')
   await expect(svg.locator('circle')).toHaveCount(expectedDots)
-  await expect(svg.locator('line')).toHaveCount(testInfo.project.name === 'mobile-chromium' ? 750 : 720)
+  await expect(svg.locator('.hero__network-lines')).toHaveCount(expectedDots)
 
   const svgBounds = await svg.boundingBox()
   expect(svgBounds).not.toBeNull()
@@ -448,7 +446,7 @@ test('the hero preserves pointer influence, headline hover states, and keyboard 
   await expect(headline).not.toBeFocused()
   await expect(headline).toHaveText('I make things')
   await expect(svg.locator('circle')).toHaveCount(expectedDots)
-  await expect(svg.locator('line')).toHaveCount(testInfo.project.name === 'mobile-chromium' ? 750 : 720)
+  await expect(svg.locator('.hero__network-lines')).toHaveCount(expectedDots)
 })
 
 test('reduced motion starts with a static readable network and no recurring RAF', async ({ page }, testInfo) => {
@@ -461,7 +459,7 @@ test('reduced motion starts with a static readable network and no recurring RAF'
   await expect(headline).toBeVisible()
   const expectedDots = testInfo.project.name === 'mobile-chromium' ? 150 : 120
   await expect(svg.locator('circle')).toHaveCount(expectedDots)
-  await expect(svg.locator('line')).toHaveCount(testInfo.project.name === 'mobile-chromium' ? 750 : 720)
+  await expect(svg.locator('.hero__network-lines')).toHaveCount(expectedDots)
   await expect(headline).toHaveCSS('animation-name', 'none')
   await expect.poll(() => pendingHeroFrames(page)).toBe(0)
 
@@ -526,7 +524,7 @@ test('visibility pauses and resumes one loop, composing with reduced motion', as
   await expect.poll(() => pendingHeroFrames(page)).toBe(0)
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(page.locator('.hero__canvas circle')).toHaveCount(150)
-  await expect(page.locator('.hero__canvas line')).toHaveCount(750)
+  await expect(page.locator('.hero__canvas .hero__network-lines')).toHaveCount(150)
   await expect(page.locator('.hero__canvas')).toHaveAttribute('height', '764')
   await expect.poll(() => pendingHeroFrames(page)).toBe(0)
   await setVisibility('hidden')
@@ -550,22 +548,25 @@ test('resizing rebuilds exact network configuration and keeps pointer interactio
   await openReadyPage(page, routes[0])
   const svg = page.locator('.hero__canvas')
   await expect(svg.locator('circle')).toHaveCount(120)
-  await expect(svg.locator('line')).toHaveCount(720)
+  await expect(svg.locator('.hero__network-lines')).toHaveCount(120)
 
   await page.setViewportSize({ width: 599, height: 844 })
+  await page.evaluate(() => window.dispatchEvent(new Event('orientationchange')))
   await expect(svg.locator('circle')).toHaveCount(150)
-  await expect(svg.locator('line')).toHaveCount(750)
+  await expect(svg.locator('.hero__network-lines')).toHaveCount(150)
   await expect(svg).toHaveAttribute('height', '764')
   await expect(svg.locator('circle')).toHaveCount(150)
 
   await page.setViewportSize({ width: 600, height: 844 })
+  await page.evaluate(() => window.dispatchEvent(new Event('orientationchange')))
   await expect(svg.locator('circle')).toHaveCount(120)
-  await expect(svg.locator('line')).toHaveCount(720)
+  await expect(svg.locator('.hero__network-lines')).toHaveCount(120)
   await expect(svg).toHaveAttribute('height', '764')
 
   await page.setViewportSize({ width: 1200, height: 800 })
+  await page.evaluate(() => window.dispatchEvent(new Event('orientationchange')))
   await expect(svg.locator('circle')).toHaveCount(120)
-  await expect(svg.locator('line')).toHaveCount(720)
+  await expect(svg.locator('.hero__network-lines')).toHaveCount(120)
   await expect(svg).toHaveAttribute('height', '720')
   const bounds = await svg.boundingBox()
   expect(bounds).not.toBeNull()
@@ -597,7 +598,7 @@ test('mobile hero preserves native scrolling during browser-chrome height resize
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
 })
 
-test('mobile scrolling pauses offscreen hero work and avoids live backdrop blur', async ({ page }, testInfo) => {
+test('mobile scrolling pauses Hero work only after it is fully offscreen', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile-chromium')
   await installRafProbe(page)
   await page.emulateMedia({ reducedMotion: 'no-preference' })
@@ -621,8 +622,9 @@ test('resize while reduced motion is active rebuilds a static network without st
   await openReadyPage(page, routes[0])
   const svg = page.locator('.hero__canvas')
   await page.setViewportSize({ width: 390, height: 844 })
+  await page.evaluate(() => window.dispatchEvent(new Event('orientationchange')))
   await expect(svg.locator('circle')).toHaveCount(150)
-  await expect(svg.locator('line')).toHaveCount(750)
+  await expect(svg.locator('.hero__network-lines')).toHaveCount(150)
   await expect(svg).toHaveAttribute('height', '764')
   await expect.poll(() => pendingHeroFrames(page)).toBe(0)
   await expect(page.getByRole('heading', { name: 'I make things', exact: true })).toBeAttached()
