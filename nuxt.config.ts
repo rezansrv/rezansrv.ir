@@ -1,4 +1,5 @@
 const siteUrl = 'https://rezansrv.ir'
+const releaseYear = new Date().getUTCFullYear()
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-11',
@@ -6,23 +7,23 @@ export default defineNuxtConfig({
   ssr: true,
   telemetry: false,
 
+  experimental: {
+    prerenderErrorPages: [404],
+  },
+
   modules: ['@nuxt/eslint'],
 
   css: [
-    'animate.css/animate.min.css',
     '~/assets/css/main.scss',
   ],
 
   app: {
     head: {
-      htmlAttrs: { lang: 'en' },
+      htmlAttrs: { lang: 'en', dir: 'ltr' },
       title: 'Reza Naserivand',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        {
-          name: 'keywords',
-          content: 'رضا، رضا ناصری، رضا ناصری وند، Reza, Reza Naseri, Reza Naserivand, ناصری وند، ناصری، رضا ناصری فرانت اند، Front End Developer, Web Developer',
-        },
+        { name: 'author', content: 'Reza Naserivand' },
         { name: 'theme-color', content: '#000000' },
       ],
       link: [
@@ -34,6 +35,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       siteUrl,
+      releaseYear,
     },
   },
 

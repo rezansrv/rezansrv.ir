@@ -39,15 +39,17 @@ function resolveRequest(pathname) {
 const server = createServer((request, response) => {
   try {
     const url = new URL(request.url || '/', `http://${host}:${port}`)
-    const filePath = resolveRequest(url.pathname)
+    const resolvedPath = resolveRequest(url.pathname)
+    const isNotFound = resolvedPath === null
+    const filePath = resolvedPath || resolve(publicRoot, '404.html')
 
-    if (!filePath) {
+    if (!existsSync(filePath) || !statSync(filePath).isFile()) {
       response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
       response.end('Not found')
       return
     }
 
-    response.writeHead(200, {
+    response.writeHead(isNotFound ? 404 : 200, {
       'cache-control': 'no-store',
       'content-type': contentTypes[extname(filePath)] || 'application/octet-stream',
     })

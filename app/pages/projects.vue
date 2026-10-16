@@ -3,23 +3,10 @@ import projectsData from '~~/data/projectsList.json'
 import type { Project } from '~/types/content'
 
 const projects = projectsData satisfies Project[]
-const canonicalUrl = 'https://rezansrv.ir/projects'
-const description = 'Selected open-source projects by Reza Naserivand.'
-
-useSeoMeta({
-  title: 'Projects | Reza Naserivand',
-  description,
-  ogTitle: 'Projects | Reza Naserivand',
-  ogDescription: description,
-  ogType: 'website',
-  ogUrl: canonicalUrl,
-  twitterCard: 'summary',
-  twitterTitle: 'Projects | Reza Naserivand',
-  twitterDescription: description,
-})
-
-useHead({
-  link: [{ rel: 'canonical', href: canonicalUrl }],
+useSiteSeo({
+  path: '/projects',
+  title: 'Projects by Reza Naserivand | Software Engineer',
+  description: 'Selected open-source software projects by Reza Naserivand.',
 })
 </script>
 
@@ -50,6 +37,14 @@ useHead({
   font-style: normal;
   font-weight: 500;
   text-transform: uppercase;
+}
+
+@media (min-width: 781px) and (max-width: 1100px) {
+  .projectheading {
+    left: 24px;
+    writing-mode: vertical-rl;
+    transform: translateY(-50%);
+  }
 }
 
 @media (max-width: 780px) {

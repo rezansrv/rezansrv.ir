@@ -27,9 +27,9 @@ const postRecords = JSON.parse(
 ) as PostRecord[]
 
 const routes = [
-  { path: '/', heading: 'Hello!', title: 'Reza Naserivand | Front-End Developer' },
-  { path: '/projects', heading: 'Projects', title: 'Projects | Reza Naserivand' },
-  { path: '/writing', heading: 'Writing', title: 'Writing | Reza Naserivand' },
+  { path: '/', heading: 'Software engineering across web, data, and AI.', title: 'Reza Naserivand | Software Engineer' },
+  { path: '/projects', heading: 'Projects', title: 'Projects by Reza Naserivand | Software Engineer' },
+  { path: '/writing', heading: 'Writing', title: 'Writing by Reza Naserivand | Software Engineer' },
 ]
 
 async function openReadyPage(page: Page, route: typeof routes[number]) {
@@ -107,10 +107,23 @@ for (const route of routes) {
 
     if (route.path === '/') {
       await expect(page.getByText('I make things', { exact: true }).first()).toBeAttached()
-      await expect(page.getByText('I’m Reza Naserivand', { exact: false })).toBeVisible()
-      const profileImage = page.getByRole('img', { name: 'Reza Naserivand' })
+      await expect(page.getByText('About Reza Naserivand', { exact: true })).toBeVisible()
+      await expect(page.getByText('frontend development with Vue, Nuxt, and React', { exact: false })).toBeVisible()
+      await expect(page.getByText('SQL Server–based data systems', { exact: false })).toBeVisible()
+      await expect(page.locator('.home-about__alternate-name')).toHaveCount(0)
+      await expect(page.locator('#home-about-persian')).toBeAttached()
+      await expect(page.locator('#home-about-persian')).not.toBeVisible()
+      await expect(page.locator('#home-about-persian')).toContainText('کارشناسی ارشد هوش مصنوعی می‌خوانم')
+      await expect(page.locator('#home-about-persian')).toHaveAttribute('lang', 'fa')
+      await expect(page.locator('#home-about-persian')).toHaveAttribute('dir', 'rtl')
+      const profileImage = page.getByRole('img', { name: 'Portrait of Reza Naserivand' })
+      await expect(profileImage).toHaveAttribute('src', '/images/me.jpg')
+      await expect(profileImage).toHaveAttribute('loading', 'lazy')
+      await expect(profileImage).toHaveAttribute('decoding', 'async')
       await expect(profileImage).toHaveJSProperty('complete', true)
       expect(await profileImage.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+      expect(await profileImage.evaluate(image => (image as HTMLImageElement).currentSrc)).toMatch(/\/images\/me-(?:560|840)\.webp$/)
+      await expect(page.locator('.hero')).toHaveCSS('background-image', /backGround\.jpg/)
     }
     else if (route.path === '/projects') {
       const rows = page.locator('.github-table tbody tr')
@@ -132,7 +145,7 @@ for (const route of routes) {
       await firstRow.hover()
       await expect(firstRow.locator('td')).toHaveCSS('filter', 'brightness(1.5)')
     }
-    else {
+    else if (route.path === '/writing') {
       const rows = page.locator('.posts-table tbody tr')
       await expect(rows).toHaveCount(postRecords.length)
 
@@ -158,6 +171,12 @@ for (const route of routes) {
         }
       }
     }
+    const footer = page.getByRole('contentinfo')
+    await expect(footer).toContainText('© 2026 Reza Naserivand')
+    await expect(footer).toContainText('Made with Nuxt 4')
+    await expect(footer.locator('.footer__nuxt svg')).toBeVisible()
+    await expect(footer.locator('.footer__nuxt svg')).toHaveCSS('fill', 'rgb(0, 220, 130)')
+    await expect(footer).not.toContainText('Made with Vue v2')
 
     const reloadResponse = await page.reload({ waitUntil: 'domcontentloaded' })
     expect(reloadResponse?.status(), `Expected ${route.path} to refresh directly`).toBe(200)
@@ -167,6 +186,43 @@ for (const route of routes) {
     expect(diagnostics.pageErrors, `Unexpected runtime errors after refreshing ${route.path}`).toEqual([])
   })
 }
+
+test('an unknown route returns a server-rendered 404 with a working home link', async ({ page }) => {
+  const consoleErrors: string[] = []
+  const pageErrors: string[] = []
+  const failedRequests: string[] = []
+  const errorResponses: Array<{ path: string, status: number }> = []
+  page.on('console', message => {
+    if (message.type() === 'error' || /hydration/i.test(message.text())) consoleErrors.push(message.text())
+  })
+  page.on('pageerror', error => pageErrors.push(error.message))
+  page.on('requestfailed', request => failedRequests.push(request.url()))
+  page.on('response', (response) => {
+    if (response.status() >= 400) errorResponses.push({ path: new URL(response.url()).pathname, status: response.status() })
+  })
+
+  const response = await page.goto('/this-route-does-not-exist', { waitUntil: 'domcontentloaded' })
+  expect(response?.status()).toBe(404)
+  await expect(page.getByRole('heading', { name: '404' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'A little off the map.' })).toBeVisible()
+  await expect(page.getByText('The page you are looking for could not be found.')).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Explore the site' }).getByRole('link', { name: 'Projects' })).toHaveAttribute('href', '/projects')
+  await expect(page.getByRole('navigation', { name: 'Explore the site' }).getByRole('link', { name: 'Writing' })).toHaveAttribute('href', '/writing')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  const returnLink = page.getByRole('link', { name: 'Return to home' })
+  await expect(returnLink).toHaveAttribute('href', '/')
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'REZA NASERIVAND', exact: true })).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(returnLink).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/127\.0\.0\.1:4173\/$/)
+  await expect(page.getByRole('heading', { name: 'Software engineering across web, data, and AI.', exact: true })).toBeVisible()
+  expect(consoleErrors.filter(message => !message.includes('server responded with a status of 404 (Not Found)'))).toEqual([])
+  expect(pageErrors).toEqual([])
+  expect(failedRequests).toEqual([])
+  expect(errorResponses).toEqual([{ path: '/this-route-does-not-exist', status: 404 }])
+})
 
 test('header navigation changes routes without a full-page dependency', async ({ page }) => {
   const diagnostics = await openReadyPage(page, routes[0])
@@ -184,6 +240,84 @@ test('header navigation changes routes without a full-page dependency', async ({
   await page.waitForTimeout(100)
   expect(diagnostics.consoleErrors, 'Unexpected console or hydration errors during internal navigation').toEqual([])
   expect(diagnostics.pageErrors, 'Unexpected runtime errors during internal navigation').toEqual([])
+})
+
+test('the header name keeps its geometry while providing a reduced-motion-safe neon glitch', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await openReadyPage(page, routes[0])
+  const logo = page.locator('.header--nav--logo')
+  await expect(logo).toHaveText('REZA NASERIVAND.')
+  await expect(logo.locator('.header--nav--logo-dot')).toHaveCSS('color', 'rgb(240, 53, 134)')
+  await expect(logo).toHaveAttribute('data-text', 'REZA NASERIVAND')
+
+  const beforeHover = await logo.boundingBox()
+  const animatedStyle = await logo.evaluate(element => ({
+    beforeContent: getComputedStyle(element, '::before').content,
+    beforeAnimation: getComputedStyle(element, '::before').animationName,
+    afterAnimation: getComputedStyle(element, '::after').animationName,
+    textShadow: getComputedStyle(element).textShadow,
+  }))
+  expect(animatedStyle.beforeContent).toBe('"REZA NASERIVAND"')
+  expect(animatedStyle.beforeAnimation).not.toBe('none')
+  expect(animatedStyle.afterAnimation).not.toBe('none')
+  expect(animatedStyle.textShadow).toBe('none')
+
+  await logo.hover()
+  const afterHover = await logo.boundingBox()
+  expect(afterHover).toEqual(beforeHover)
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  const reducedStyle = await logo.evaluate(element => ({
+    beforeAnimation: getComputedStyle(element, '::before').animationName,
+    afterAnimation: getComputedStyle(element, '::after').animationName,
+  }))
+  expect(reducedStyle.beforeAnimation).toBe('none')
+  expect(reducedStyle.afterAnimation).toBe('none')
+})
+
+test('the homepage language control reveals the concise Persian About content', async ({ page }) => {
+  const diagnostics = await openReadyPage(page, routes[0])
+  const toggle = page.locator('.home-about__language-toggle')
+  const englishPanel = page.locator('#home-about-english')
+  const persianPanel = page.locator('#home-about-persian')
+
+  await expect(toggle).toHaveAttribute('aria-label', 'نمایش معرفی فارسی')
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  await expect(toggle.locator('svg')).toBeVisible()
+  await expect(englishPanel).toBeVisible()
+  await expect(persianPanel).not.toBeVisible()
+  await expect(englishPanel).toHaveAttribute('aria-hidden', 'false')
+  await expect(persianPanel).toHaveAttribute('aria-hidden', 'true')
+  await expect(page.locator('.home-about__card a')).toHaveCount(0)
+
+  await toggle.focus()
+  await expect(toggle).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(toggle).toHaveAttribute('aria-label', 'Show English introduction')
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  await expect(englishPanel).not.toBeVisible()
+  await expect(persianPanel).toBeVisible()
+  await expect(englishPanel).toHaveAttribute('aria-hidden', 'true')
+  await expect(persianPanel).toHaveAttribute('aria-hidden', 'false')
+  await expect(page.locator('#home-about-persian-title')).toHaveText(
+    'من رضا ناصری‌وند هستم؛ مهندس نرم‌افزار.',
+  )
+  await expect(persianPanel).toContainText('فرانت‌اند و کار با Vue، Nuxt و React')
+  await expect(persianPanel).toContainText('بینایی ماشین و تحلیل تصاویر پزشکی')
+  const portraitRole = page.locator('.home-about__portrait > p')
+  await expect(portraitRole).toHaveText('مهندس نرم‌افزار')
+  await expect(portraitRole).toHaveAttribute('lang', 'fa')
+  await expect(portraitRole).toHaveCSS('font-family', /Tahoma/)
+
+  await page.keyboard.press('Space')
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  await expect(englishPanel).toBeVisible()
+  await expect(persianPanel).not.toBeVisible()
+  await expect(portraitRole).toHaveText('Software Engineer')
+  await expect(portraitRole).toHaveAttribute('lang', 'en')
+  await page.waitForTimeout(100)
+  expect(diagnostics.consoleErrors, 'Unexpected console or hydration errors during language switching').toEqual([])
+  expect(diagnostics.pageErrors, 'Unexpected runtime errors during language switching').toEqual([])
 })
 
 test('the home network is removed and rebuilt across route unmount and remount', async ({ page }, testInfo) => {
@@ -473,6 +607,30 @@ test('layout follows the baseline desktop and mobile breakpoints', async ({ page
     expect(layout.viewportWidth).toBe(1440)
     expect(layout.navDirection).toBe('row')
     expect(layout.headingPosition).toBe('fixed')
+  }
+})
+
+test('vertical page headings do not overlap content at an intermediate viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 900 })
+
+  for (const route of [routes[1], routes[2]]) {
+    await openReadyPage(page, route)
+    const heading = page.locator('.projectheading')
+    const content = page.locator(route.path === '/projects' ? '.github' : '.posts-head')
+    const [headingBounds, contentBounds] = await Promise.all([
+      heading.boundingBox(),
+      content.boundingBox(),
+    ])
+
+    expect(headingBounds).not.toBeNull()
+    expect(contentBounds).not.toBeNull()
+    expect(headingBounds!.x + headingBounds!.width).toBeLessThan(contentBounds!.x)
+    await expect(heading).toHaveCSS('writing-mode', 'vertical-rl')
+
+    const hasHorizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    )
+    expect(hasHorizontalOverflow).toBe(false)
   }
 })
 

@@ -3,23 +3,10 @@ import postsData from '~~/data/postsList.json'
 import type { Post } from '~/types/content'
 
 const posts = postsData satisfies Post[]
-const canonicalUrl = 'https://rezansrv.ir/writing'
-const description = 'Articles by Reza Naserivand about front-end development, security, and design patterns.'
-
-useSeoMeta({
-  title: 'Writing | Reza Naserivand',
-  description,
-  ogTitle: 'Writing | Reza Naserivand',
-  ogDescription: description,
-  ogType: 'website',
-  ogUrl: canonicalUrl,
-  twitterCard: 'summary',
-  twitterTitle: 'Writing | Reza Naserivand',
-  twitterDescription: description,
-})
-
-useHead({
-  link: [{ rel: 'canonical', href: canonicalUrl }],
+useSiteSeo({
+  path: '/writing',
+  title: 'Writing by Reza Naserivand | Software Engineer',
+  description: 'Articles by Reza Naserivand on software engineering, front-end security, and design patterns.',
 })
 </script>
 
@@ -50,6 +37,14 @@ useHead({
   font-style: normal;
   font-weight: 500;
   text-transform: uppercase;
+}
+
+@media (min-width: 781px) and (max-width: 1100px) {
+  .projectheading {
+    left: 24px;
+    writing-mode: vertical-rl;
+    transform: translateY(-50%);
+  }
 }
 
 @media (max-width: 780px) {

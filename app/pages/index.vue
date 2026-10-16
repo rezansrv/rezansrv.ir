@@ -1,21 +1,35 @@
 <script setup lang="ts">
-const canonicalUrl = 'https://rezansrv.ir/'
-const description = 'رضا ناصری وند - Front End Developer. با تجربه در توسعه وب و طراحی رابط کاربری (UI/UX)'
+import { createPersonSchema } from '~/utils/profile'
 
-useSeoMeta({
-  title: 'Reza Naserivand | Front-End Developer',
+const title = 'Reza Naserivand | Software Engineer'
+const description = 'Reza Naserivand is a software engineer working across reliable web applications, data-intensive systems, and applied artificial intelligence.'
+
+useSiteSeo({
+  path: '/',
+  title,
   description,
-  ogTitle: 'Reza Naserivand | Front-End Developer',
-  ogDescription: description,
-  ogType: 'website',
-  ogUrl: canonicalUrl,
-  twitterCard: 'summary',
-  twitterTitle: 'Reza Naserivand | Front-End Developer',
-  twitterDescription: description,
 })
 
 useHead({
-  link: [{ rel: 'canonical', href: canonicalUrl }],
+  link: [
+    {
+      rel: 'preload',
+      as: 'image',
+      href: '/images/backGround.jpg',
+      type: 'image/jpeg',
+      fetchpriority: 'high',
+    },
+  ],
+  script: [
+    {
+      key: 'person-json-ld',
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        ...createPersonSchema(description),
+      }),
+    },
+  ],
 })
 </script>
 
