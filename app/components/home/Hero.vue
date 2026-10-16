@@ -1,5 +1,6 @@
 <template>
   <section
+    ref="heroSection"
     class="hero"
     style="background-image: url('/images/backGround.jpg')"
     aria-labelledby="hero-heading"
@@ -44,6 +45,7 @@ import { createHeroAnimationRunState } from '~/utils/heroAnimationRunState'
 import { applyHeroPointerInteraction, createHeroPointerState } from '~/utils/heroPointerInteraction'
 
 const dynamicLayer = ref<SVGGElement | null>(null)
+const heroSection = ref<HTMLElement | null>(null)
 const headline = ref<SVGTextElement | null>(null)
 const displayText = ref('I make things')
 const isAlternateHeadline = ref(false)
@@ -55,6 +57,7 @@ let circles: SVGCircleElement[] = []
 let lines: SVGLineElement[] = []
 let latestClientPointer: { x: number; y: number } | null = null
 let resizeTimer: number | null = null
+let visibilityObserver: IntersectionObserver | null = null
 
 const handleSvgMouseMove: EventListener = (event) => {
   if (!runState?.isActive) return
@@ -237,9 +240,25 @@ onMounted(() => {
   })
   runState.setReducedMotion(mediaQuery.matches)
   runState.setVisible(document.visibilityState === 'visible')
+
+  if ('IntersectionObserver' in window && heroSection.value) {
+    visibilityObserver = new IntersectionObserver(([entry]) => {
+      if (!entry) return
+
+      const enoughHeroIsVisible = entry.isIntersecting
+        && (!coarsePointerQuery.matches || entry.intersectionRatio >= 0.35)
+      if (!enoughHeroIsVisible) pointer.moving = false
+      runState?.setInViewport(enoughHeroIsVisible)
+    }, {
+      threshold: coarsePointerQuery.matches ? [0, 0.35, 1] : [0, 1],
+    })
+    visibilityObserver.observe(heroSection.value)
+  }
 })
 
 onUnmounted(() => {
+  visibilityObserver?.disconnect()
+  visibilityObserver = null
   if (resizeTimer !== null) {
     window.clearTimeout(resizeTimer)
     resizeTimer = null

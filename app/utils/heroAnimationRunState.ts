@@ -6,11 +6,12 @@ export type HeroAnimationRunStateOptions = {
 export function createHeroAnimationRunState({ start, stop }: HeroAnimationRunStateOptions) {
   let reducedMotion = false
   let visible = false
+  let inViewport = true
   let active = false
   let disposed = false
 
   const reconcile = () => {
-    const shouldRun = !disposed && visible && !reducedMotion
+    const shouldRun = !disposed && visible && inViewport && !reducedMotion
     if (shouldRun === active) return
 
     active = shouldRun
@@ -27,6 +28,11 @@ export function createHeroAnimationRunState({ start, stop }: HeroAnimationRunSta
     setVisible(value: boolean) {
       if (disposed || visible === value) return
       visible = value
+      reconcile()
+    },
+    setInViewport(value: boolean) {
+      if (disposed || inViewport === value) return
+      inViewport = value
       reconcile()
     },
     dispose() {
