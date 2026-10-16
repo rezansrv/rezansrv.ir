@@ -91,6 +91,7 @@ onMounted(() => {
 
   const svg = dynamicLayer.value.ownerSVGElement
   if (!svg) return
+  const coarsePointerQuery = window.matchMedia('(pointer: coarse)')
 
   const updateNetwork = () => {
     if (!network) return
@@ -124,6 +125,17 @@ onMounted(() => {
   const rebuildNetwork = () => {
     const viewportWidth = window.innerWidth
     const viewportHeight = window.innerHeight
+
+    // Mobile browser chrome changes the visual viewport height while the user
+    // scrolls. Rebuilding hundreds of SVG nodes for those height-only resize
+    // events causes layout jumps and can interrupt the native scroll gesture.
+    // Width changes still rebuild the network, including orientation changes.
+    if (
+      coarsePointerQuery.matches
+      && viewportWidth === lastViewportWidth
+      && viewportHeight !== lastViewportHeight
+    ) return false
+
     if (viewportWidth === lastViewportWidth && viewportHeight === lastViewportHeight) return false
 
     lastViewportWidth = viewportWidth
@@ -284,6 +296,19 @@ $glitch-blue-lime-end: (1.4px, 2.1px, 2.8px, 1.8px, 0.8px, -0.2px, -1.2px, -2.2p
 .hero__canvas {
   width: 100%;
   height: 90vh;
+}
+
+@media (pointer: coarse) {
+  .hero__canvas {
+    touch-action: pan-y pinch-zoom;
+  }
+
+  @supports (height: 1svh) {
+    .hero,
+    .hero__canvas {
+      height: 90svh;
+    }
+  }
 }
 
 .text-glitch {
