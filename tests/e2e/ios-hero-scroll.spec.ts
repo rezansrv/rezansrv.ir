@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 async function installRafProbe(page: Page) {
   await page.addInitScript(() => {
-    const probe = { pending: new Set<number>() }
+    const probe = { callbacks: 0, pending: new Set<number>() }
     Object.defineProperty(window, '__heroRafProbe', { value: probe })
     const request = window.requestAnimationFrame.bind(window)
     const cancel = window.cancelAnimationFrame.bind(window)
@@ -11,6 +11,7 @@ async function installRafProbe(page: Page) {
       let handle = 0
       handle = request((timestamp) => {
         probe.pending.delete(handle)
+        probe.callbacks++
         callback(timestamp)
       })
       probe.pending.add(handle)
@@ -23,49 +24,73 @@ async function installRafProbe(page: Page) {
   })
 }
 
-async function pendingHeroFrames(page: Page) {
-  return page.evaluate(() => (
-    window as Window & { __heroRafProbe: { pending: Set<number> } }
-  ).__heroRafProbe.pending.size)
+async function heroProbe(page: Page) {
+  return page.evaluate(() => {
+    const probe = (
+      window as Window & { __heroRafProbe: { callbacks: number; pending: Set<number> } }
+    ).__heroRafProbe
+    return { callbacks: probe.callbacks, pending: probe.pending.size }
+  })
 }
 
-test('iPhone touch scrolling suspends Hero rendering only while the gesture is active', async ({ page }) => {
+test('iPhone scrolling advances while the optimized Hero keeps animating', async ({ page }) => {
   await installRafProbe(page)
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.goto('/', { waitUntil: 'domcontentloaded' })
 
   const hero = page.locator('.hero')
+  const canvas = page.locator('.hero__canvas')
   const headline = page.locator('.text-glitch')
   await expect(hero).toBeVisible()
-  await expect.poll(() => pendingHeroFrames(page)).toBe(1)
+  await expect(canvas.locator('circle')).toHaveCount(150)
+  await expect(canvas.locator('.hero__network-lines')).toHaveCount(150)
+  await expect(canvas.locator('line')).toHaveCount(0)
+  await expect(headline).toHaveCSS('animation-play-state', 'running')
+  await expect.poll(async () => (await heroProbe(page)).pending).toBe(1)
 
-  await page.evaluate(() => {
+  const callbacksBeforeScroll = (await heroProbe(page)).callbacks
+  const scrollResult = await page.evaluate(async () => {
     window.dispatchEvent(new PointerEvent('pointerdown', {
       bubbles: true,
       isPrimary: true,
       pointerId: 1,
       pointerType: 'touch',
     }))
-  })
-  await expect(hero).toHaveClass(/hero--ios-scroll-paused/)
-  await expect(headline).toHaveCSS('animation-play-state', 'paused')
-  await expect.poll(() => pendingHeroFrames(page)).toBe(0)
 
-  await page.evaluate(() => {
-    window.scrollTo(0, 600)
-  })
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
-  await expect(hero).toHaveClass(/hero--ios-scroll-paused/)
-  await expect.poll(() => pendingHeroFrames(page)).toBe(0)
+    const samples: number[] = []
+    const target = Math.min(400, document.documentElement.scrollHeight - window.innerHeight)
+    for (let step = 1; step <= 20; step++) {
+      window.scrollTo(0, target * (step / 20))
+      await new Promise<void>(resolve => window.requestAnimationFrame(() => resolve()))
+      samples.push(window.scrollY)
+    }
 
-  await page.evaluate(() => {
     window.dispatchEvent(new PointerEvent('pointerup', {
       bubbles: true,
       isPrimary: true,
       pointerId: 1,
       pointerType: 'touch',
     }))
+    return { samples, target }
   })
+
+  expect(scrollResult.target).toBeGreaterThan(300)
+  expect(scrollResult.samples.at(-1)).toBeGreaterThanOrEqual(scrollResult.target - 5)
   await expect(hero).not.toHaveClass(/hero--ios-scroll-paused/)
-  await expect.poll(() => pendingHeroFrames(page)).toBe(1)
+  await expect(headline).toHaveCSS('animation-play-state', 'running')
+  await expect.poll(async () => (await heroProbe(page)).pending).toBe(1)
+  await expect.poll(async () => (await heroProbe(page)).callbacks).toBeGreaterThan(callbacksBeforeScroll)
+
+  const firstCircle = await canvas.locator('circle').first().elementHandle()
+  const originalHeight = await canvas.getAttribute('height')
+  expect(firstCircle).not.toBeNull()
+
+  // iOS browser chrome produces height-only resize events while scrolling.
+  // They must not replace the live network or interrupt the active gesture.
+  const viewport = page.viewportSize()!
+  await page.setViewportSize({ width: viewport.width, height: viewport.height - 80 })
+  await page.waitForTimeout(200)
+  expect(await firstCircle!.evaluate(element => element.isConnected)).toBe(true)
+  await expect(canvas).toHaveAttribute('height', originalHeight!)
+  await expect.poll(async () => (await heroProbe(page)).pending).toBe(1)
 })

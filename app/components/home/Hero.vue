@@ -2,7 +2,6 @@
   <section
     ref="heroSection"
     class="hero"
-    :class="{ 'hero--ios-scroll-paused': iosScrollPaused }"
     style="background-image: url('/images/backGround.jpg')"
     aria-labelledby="hero-heading"
   >
@@ -48,7 +47,6 @@ import { applyHeroPointerInteraction, createHeroPointerState } from '~/utils/her
 const dynamicLayer = ref<SVGGElement | null>(null)
 const heroSection = ref<HTMLElement | null>(null)
 const headline = ref<SVGTextElement | null>(null)
-const iosScrollPaused = ref(false)
 const displayText = ref('I make things')
 const isAlternateHeadline = ref(false)
 const pointer = createHeroPointerState()
@@ -56,10 +54,10 @@ let lifecycle: ReturnType<typeof createHeroAnimationLifecycle> | null = null
 let runState: ReturnType<typeof createHeroAnimationRunState> | null = null
 let network: HeroNetwork | null = null
 let circles: SVGCircleElement[] = []
-let lines: SVGLineElement[] = []
+let renderedRadii: number[] = []
+let linePaths: SVGPathElement[] = []
 let latestClientPointer: { x: number; y: number } | null = null
 let resizeTimer: number | null = null
-let iosResumeTimer: number | null = null
 let visibilityObserver: IntersectionObserver | null = null
 
 const handleSvgMouseMove: EventListener = (event) => {
@@ -98,70 +96,26 @@ onMounted(() => {
   const svg = dynamicLayer.value.ownerSVGElement
   if (!svg) return
   const coarsePointerQuery = window.matchMedia('(pointer: coarse)')
-  const isIOSRuntime = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  let touchIsActive = false
-
-  const clearIOSResumeTimer = () => {
-    if (iosResumeTimer === null) return
-    window.clearTimeout(iosResumeTimer)
-    iosResumeTimer = null
-  }
-
-  const setIOSScrollPaused = (paused: boolean) => {
-    if (!isIOSRuntime) return
-    iosScrollPaused.value = paused
-    if (paused) pointer.moving = false
-    runState?.setInteractionPaused(paused)
-  }
-
-  const scheduleIOSResumeAfterScroll = () => {
-    clearIOSResumeTimer()
-    if (touchIsActive) return
-
-    iosResumeTimer = window.setTimeout(() => {
-      iosResumeTimer = null
-      if (!touchIsActive) setIOSScrollPaused(false)
-    }, 250)
-  }
-
-  const handleIOSPointerDown: EventListener = (event) => {
-    if ((event as PointerEvent).pointerType !== 'touch') return
-    touchIsActive = true
-    clearIOSResumeTimer()
-    setIOSScrollPaused(true)
-  }
-
-  const handleIOSPointerEnd: EventListener = (event) => {
-    if ((event as PointerEvent).pointerType !== 'touch') return
-    touchIsActive = false
-    scheduleIOSResumeAfterScroll()
-  }
-
-  const handleIOSScroll = () => {
-    setIOSScrollPaused(true)
-    scheduleIOSResumeAfterScroll()
-  }
 
   const updateNetwork = () => {
     if (!network) return
 
     network.step()
-    let lineIndex = 0
     for (let dotIndex = 0; dotIndex < network.dots.length; dotIndex++) {
       const dot = network.dots[dotIndex]!
       const circle = circles[dotIndex]!
       circle.setAttribute('cx', String(dot.x))
       circle.setAttribute('cy', String(dot.y))
-      circle.setAttribute('r', String(dot.radius))
-
-      for (const line of dot.lines) {
-        const element = lines[lineIndex++]!
-        element.setAttribute('x1', String(line.x1))
-        element.setAttribute('y1', String(line.y1))
-        element.setAttribute('x2', String(line.x2))
-        element.setAttribute('y2', String(line.y2))
+      if (renderedRadii[dotIndex] !== dot.radius) {
+        circle.setAttribute('r', String(dot.radius))
+        renderedRadii[dotIndex] = dot.radius
       }
+
+      let pathData = ''
+      for (const line of dot.lines) {
+        pathData += `M${line.x1} ${line.y1}L${line.x2} ${line.y2}`
+      }
+      linePaths[dotIndex]!.setAttribute('d', pathData)
     }
 
     // The Vue 2 mouseInteraction ran after dotUpdate, so these model changes
@@ -176,16 +130,6 @@ onMounted(() => {
     const viewportWidth = window.innerWidth
     const viewportHeight = window.innerHeight
 
-    // Mobile browser chrome changes the visual viewport height while the user
-    // scrolls. Rebuilding hundreds of SVG nodes for those height-only resize
-    // events causes layout jumps and can interrupt the native scroll gesture.
-    // Width changes still rebuild the network, including orientation changes.
-    if (
-      coarsePointerQuery.matches
-      && viewportWidth === lastViewportWidth
-      && viewportHeight !== lastViewportHeight
-    ) return false
-
     if (viewportWidth === lastViewportWidth && viewportHeight === lastViewportHeight) return false
 
     lastViewportWidth = viewportWidth
@@ -194,7 +138,8 @@ onMounted(() => {
     pointer.distances = []
     lifecycle?.clearTracked()
     circles = []
-    lines = []
+    renderedRadii = []
+    linePaths = []
 
     const layer = dynamicLayer.value
     if (!layer) return false
@@ -212,25 +157,22 @@ onMounted(() => {
       lifecycle?.track(circle)
       layer.appendChild(circle)
       circles.push(circle)
+      renderedRadii.push(dot.radius)
 
-      for (const line of dot.lines) {
-        const element = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-        element.setAttribute('x1', String(line.x1))
-        element.setAttribute('y1', String(line.y1))
-        element.setAttribute('x2', String(line.x2))
-        element.setAttribute('y2', String(line.y2))
-        element.setAttribute('stroke', 'rgba(0,255,255,0.00)')
-        element.setAttribute('stroke-width', '1')
-        lifecycle?.track(element)
-        layer.appendChild(element)
-        lines.push(element)
-      }
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      path.setAttribute('class', 'hero__network-lines')
+      path.setAttribute('fill', 'none')
+      path.setAttribute('stroke', 'rgba(0,255,255,0.00)')
+      path.setAttribute('stroke-width', '1')
+      lifecycle?.track(path)
+      layer.appendChild(path)
+      linePaths.push(path)
     }
 
     // Preserve the legacy synchronous first update and style initialization.
     updateNetwork()
     for (const circle of circles) circle.setAttribute('fill', '#ADAAAA51')
-    for (const line of lines) line.setAttribute('stroke', '#ADAAAA33')
+    for (const path of linePaths) path.setAttribute('stroke', '#ADAAAA33')
 
     if (latestClientPointer && runState?.isActive) {
       const bounds = svg.getBoundingClientRect()
@@ -250,8 +192,18 @@ onMounted(() => {
   }
 
   const handleResize: EventListener = () => {
+    // Mobile Safari emits resize events while its browser chrome expands and
+    // collapses during a scroll. The CSS viewport already adapts; rebuilding
+    // the animated SVG here would replace hundreds of live nodes mid-gesture.
+    // Real mobile orientation changes are handled separately below.
+    if (coarsePointerQuery.matches) return
     if (resizeTimer !== null) window.clearTimeout(resizeTimer)
     resizeTimer = window.setTimeout(flushResize, 100)
+  }
+
+  const handleOrientationChange: EventListener = () => {
+    if (resizeTimer !== null) window.clearTimeout(resizeTimer)
+    resizeTimer = window.setTimeout(flushResize, 150)
   }
 
   const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -278,6 +230,7 @@ onMounted(() => {
     lifecycle.listen(headline.value, 'blur', handleHeadlineMouseOut)
   }
   lifecycle.listen(window, 'resize', handleResize)
+  lifecycle.listen(window, 'orientationchange', handleOrientationChange)
   lifecycle.listen(document, 'visibilitychange', handleVisibilityChange)
   lifecycle.listen(mediaQuery, 'change', handleMotionPreference)
 
@@ -287,14 +240,6 @@ onMounted(() => {
   })
   runState.setReducedMotion(mediaQuery.matches)
   runState.setVisible(document.visibilityState === 'visible')
-
-  if (isIOSRuntime) {
-    lifecycle.listen(window, 'pointerdown', handleIOSPointerDown)
-    lifecycle.listen(window, 'pointerup', handleIOSPointerEnd)
-    lifecycle.listen(window, 'pointercancel', handleIOSPointerEnd)
-    lifecycle.listen(window, 'scroll', handleIOSScroll)
-    setIOSScrollPaused(false)
-  }
 
   if ('IntersectionObserver' in window && heroSection.value) {
     visibilityObserver = new IntersectionObserver(([entry]) => {
@@ -313,10 +258,6 @@ onMounted(() => {
 onUnmounted(() => {
   visibilityObserver?.disconnect()
   visibilityObserver = null
-  if (iosResumeTimer !== null) {
-    window.clearTimeout(iosResumeTimer)
-    iosResumeTimer = null
-  }
   if (resizeTimer !== null) {
     window.clearTimeout(resizeTimer)
     resizeTimer = null
@@ -327,7 +268,8 @@ onUnmounted(() => {
   lifecycle = null
   network = null
   circles = []
-  lines = []
+  renderedRadii = []
+  linePaths = []
   latestClientPointer = null
   pointer.moving = false
   pointer.distances = []
@@ -395,10 +337,6 @@ $glitch-blue-lime-end: (1.4px, 2.1px, 2.8px, 1.8px, 0.8px, -0.2px, -1.2px, -2.2p
   font-weight: bold;
   text-transform: uppercase;
   animation: glitch 2s steps(100) infinite;
-}
-
-.hero--ios-scroll-paused .text-glitch {
-  animation-play-state: paused;
 }
 
 .text-glitch:focus-visible {

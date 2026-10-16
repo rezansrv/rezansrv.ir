@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createHeroAnimationRunState } from '../../app/utils/heroAnimationRunState.ts'
 
-test('motion, visibility, viewport presence, and interaction pauses control one idempotent animation loop', () => {
+test('motion, visibility, and viewport presence control one idempotent animation loop', () => {
   let starts = 0
   let stops = 0
   const state = createHeroAnimationRunState({ start: () => starts++, stop: () => stops++ })
@@ -38,21 +38,12 @@ test('motion, visibility, viewport presence, and interaction pauses control one 
   assert.equal(state.isActive, true)
   assert.deepEqual([starts, stops], [3, 2])
 
-  state.setInteractionPaused(true)
-  state.setInteractionPaused(true)
-  assert.equal(state.isActive, false)
-  assert.deepEqual([starts, stops], [3, 3])
-  state.setInteractionPaused(false)
-  assert.equal(state.isActive, true)
-  assert.deepEqual([starts, stops], [4, 3])
-
   state.dispose()
   state.dispose()
   assert.equal(state.isDisposed, true)
   assert.equal(state.isActive, false)
-  assert.deepEqual([starts, stops], [4, 4])
+  assert.deepEqual([starts, stops], [3, 3])
   state.setVisible(true)
   state.setInViewport(false)
-  state.setInteractionPaused(true)
-  assert.deepEqual([starts, stops], [4, 4])
+  assert.deepEqual([starts, stops], [3, 3])
 })
