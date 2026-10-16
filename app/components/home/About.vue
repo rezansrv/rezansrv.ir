@@ -363,6 +363,20 @@ useHead({
   }
 }
 
+@media (pointer: coarse) {
+  .home-about__card {
+    background:
+      linear-gradient(135deg, rgb(255 255 255 / 10%), rgb(255 255 255 / 3%) 48%),
+      rgb(19 9 35 / 96%);
+    backdrop-filter: none;
+  }
+
+  .home-about__language-toggle {
+    background: rgb(8 4 15 / 90%);
+    backdrop-filter: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .home-about__language-toggle,
   .home-about__panel {
