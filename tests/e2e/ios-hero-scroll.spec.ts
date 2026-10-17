@@ -81,6 +81,42 @@ test('iPhone scrolling advances while the optimized Hero keeps animating', async
   await expect.poll(async () => (await heroProbe(page)).pending).toBe(1)
   await expect.poll(async () => (await heroProbe(page)).callbacks).toBeGreaterThan(callbacksBeforeScroll)
 
+  // Once the gesture has ended, the continuously animated SVG must not alter
+  // the page geometry or make WebKit readjust the resting scroll position.
+  const idleSamples = await page.evaluate(async () => {
+    const heroElement = document.querySelector<HTMLElement>('.hero')!
+    const canvasElement = document.querySelector<SVGElement>('.hero__canvas')!
+    const target = Math.round(heroElement.getBoundingClientRect().height / 2)
+    window.scrollTo(0, target)
+    await new Promise(resolve => window.setTimeout(resolve, 250))
+
+    const samples: Array<{
+      scrollY: number
+      documentHeight: number
+      heroHeight: number
+      canvasHeight: number
+    }> = []
+    for (let frame = 0; frame < 90; frame++) {
+      await new Promise<void>(resolve => window.requestAnimationFrame(() => resolve()))
+      samples.push({
+        scrollY: window.scrollY,
+        documentHeight: document.documentElement.scrollHeight,
+        heroHeight: heroElement.getBoundingClientRect().height,
+        canvasHeight: canvasElement.getBoundingClientRect().height,
+      })
+    }
+    return samples
+  })
+
+  expect(new Set(idleSamples.map(sample => sample.scrollY)).size).toBe(1)
+  expect(new Set(idleSamples.map(sample => sample.documentHeight)).size).toBe(1)
+  expect(new Set(idleSamples.map(sample => sample.heroHeight)).size).toBe(1)
+  expect(new Set(idleSamples.map(sample => sample.canvasHeight)).size).toBe(1)
+  await expect(hero).toHaveCSS('overflow-anchor', 'none')
+  await expect(hero).toHaveCSS('contain', /layout.*paint|paint.*layout/)
+  await expect(headline).toHaveCSS('animation-play-state', 'running')
+  await expect.poll(async () => (await heroProbe(page)).pending).toBe(1)
+
   const firstCircle = await canvas.locator('circle').first().elementHandle()
   const originalHeight = await canvas.getAttribute('height')
   expect(firstCircle).not.toBeNull()

@@ -1,6 +1,5 @@
 <template>
   <section
-    ref="heroSection"
     class="hero"
     style="background-image: url('/images/backGround.jpg')"
     aria-labelledby="hero-heading"
@@ -45,7 +44,6 @@ import { createHeroAnimationRunState } from '~/utils/heroAnimationRunState'
 import { applyHeroPointerInteraction, createHeroPointerState } from '~/utils/heroPointerInteraction'
 
 const dynamicLayer = ref<SVGGElement | null>(null)
-const heroSection = ref<HTMLElement | null>(null)
 const headline = ref<SVGTextElement | null>(null)
 const displayText = ref('I make things')
 const isAlternateHeadline = ref(false)
@@ -58,7 +56,6 @@ let renderedRadii: number[] = []
 let linePaths: SVGPathElement[] = []
 let latestClientPointer: { x: number; y: number } | null = null
 let resizeTimer: number | null = null
-let visibilityObserver: IntersectionObserver | null = null
 
 const handleSvgMouseMove: EventListener = (event) => {
   if (!runState?.isActive) return
@@ -241,23 +238,9 @@ onMounted(() => {
   runState.setReducedMotion(mediaQuery.matches)
   runState.setVisible(document.visibilityState === 'visible')
 
-  if ('IntersectionObserver' in window && heroSection.value) {
-    visibilityObserver = new IntersectionObserver(([entry]) => {
-      if (!entry) return
-
-      const enoughHeroIsVisible = entry.isIntersecting
-      if (!enoughHeroIsVisible) pointer.moving = false
-      runState?.setInViewport(enoughHeroIsVisible)
-    }, {
-      threshold: [0, 1],
-    })
-    visibilityObserver.observe(heroSection.value)
-  }
 })
 
 onUnmounted(() => {
-  visibilityObserver?.disconnect()
-  visibilityObserver = null
   if (resizeTimer !== null) {
     window.clearTimeout(resizeTimer)
     resizeTimer = null
@@ -307,6 +290,8 @@ $glitch-blue-lime-end: (1.4px, 2.1px, 2.8px, 1.8px, 0.8px, -0.2px, -1.2px, -2.2p
   height: 90vh;
   min-height: 420px;
   overflow: hidden;
+  overflow-anchor: none;
+  contain: layout paint;
   background-repeat: no-repeat;
   background-position: 65% center;
   background-size: cover;
@@ -314,19 +299,13 @@ $glitch-blue-lime-end: (1.4px, 2.1px, 2.8px, 1.8px, 0.8px, -0.2px, -1.2px, -2.2p
 
 .hero__canvas {
   width: 100%;
-  height: 90vh;
+  height: 100%;
+  overflow-anchor: none;
 }
 
 @media (pointer: coarse) {
   .hero__canvas {
     touch-action: pan-y pinch-zoom;
-  }
-
-  @supports (height: 1svh) {
-    .hero,
-    .hero__canvas {
-      height: 90svh;
-    }
   }
 }
 

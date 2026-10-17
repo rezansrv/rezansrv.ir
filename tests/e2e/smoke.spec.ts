@@ -598,7 +598,7 @@ test('mobile hero preserves native scrolling during browser-chrome height resize
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
 })
 
-test('mobile scrolling pauses Hero work only after it is fully offscreen', async ({ page }, testInfo) => {
+test('mobile Hero animation remains continuous after it is fully offscreen', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile-chromium')
   await installRafProbe(page)
   await page.emulateMedia({ reducedMotion: 'no-preference' })
@@ -609,7 +609,7 @@ test('mobile scrolling pauses Hero work only after it is fully offscreen', async
 
   await page.evaluate(() => document.querySelector('.home-about')?.scrollIntoView({ block: 'start' }))
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(500)
-  await expect.poll(() => pendingHeroFrames(page)).toBe(0)
+  await expect.poll(() => pendingHeroFrames(page)).toBe(1)
 
   await page.evaluate(() => window.scrollTo(0, 0))
   await expect.poll(() => pendingHeroFrames(page)).toBe(1)
