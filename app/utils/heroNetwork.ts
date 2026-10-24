@@ -54,7 +54,7 @@ export function createHeroNetwork(
       x,
       y,
       radius: 1,
-      distances: [],
+      distances: Array.from({ length: linesPerDot }, () => [-1, Number.POSITIVE_INFINITY]),
       lines: Array.from({ length: linesPerDot }, () => ({
         x1: x,
         y1: y,
@@ -73,14 +73,33 @@ export function createHeroNetwork(
       dot.y = Math.max(0, Math.min(screenHeight, dot.y))
 
       const distances = dot.distances
+      for (const nearest of distances) {
+        nearest[0] = -1
+        nearest[1] = Number.POSITIVE_INFINITY
+      }
+
       for (let j = 0; j < dotCount; j++) {
         const other = dots[j]!
         const distance = Math.floor(Math.sqrt(
           Math.pow(dot.x - other.x, 2) + Math.pow(dot.y - other.y, 2),
         ))
-        distances[j] = [j, distance]
+
+        let insertAt = linesPerDot
+        for (let nearestIndex = 0; nearestIndex < linesPerDot; nearestIndex++) {
+          if (distance < distances[nearestIndex]![1]) {
+            insertAt = nearestIndex
+            break
+          }
+        }
+        if (insertAt === linesPerDot) continue
+
+        for (let nearestIndex = linesPerDot - 1; nearestIndex > insertAt; nearestIndex--) {
+          distances[nearestIndex]![0] = distances[nearestIndex - 1]![0]
+          distances[nearestIndex]![1] = distances[nearestIndex - 1]![1]
+        }
+        distances[insertAt]![0] = j
+        distances[insertAt]![1] = distance
       }
-      distances.sort((a, b) => a[1] - b[1])
 
       for (let k = 0; k < linesPerDot; k++) {
         const line = dot.lines[k]!

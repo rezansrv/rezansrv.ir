@@ -52,7 +52,8 @@ let lifecycle: ReturnType<typeof createHeroAnimationLifecycle> | null = null
 let runState: ReturnType<typeof createHeroAnimationRunState> | null = null
 let network: HeroNetwork | null = null
 let circles: SVGCircleElement[] = []
-let lines: SVGLineElement[] = []
+let renderedRadii: number[] = []
+let linePaths: SVGPathElement[] = []
 let latestClientPointer: { x: number; y: number } | null = null
 let resizeTimer: number | null = null
 
@@ -91,26 +92,27 @@ onMounted(() => {
 
   const svg = dynamicLayer.value.ownerSVGElement
   if (!svg) return
+  const coarsePointerQuery = window.matchMedia('(pointer: coarse)')
 
   const updateNetwork = () => {
     if (!network) return
 
     network.step()
-    let lineIndex = 0
     for (let dotIndex = 0; dotIndex < network.dots.length; dotIndex++) {
       const dot = network.dots[dotIndex]!
       const circle = circles[dotIndex]!
       circle.setAttribute('cx', String(dot.x))
       circle.setAttribute('cy', String(dot.y))
-      circle.setAttribute('r', String(dot.radius))
-
-      for (const line of dot.lines) {
-        const element = lines[lineIndex++]!
-        element.setAttribute('x1', String(line.x1))
-        element.setAttribute('y1', String(line.y1))
-        element.setAttribute('x2', String(line.x2))
-        element.setAttribute('y2', String(line.y2))
+      if (renderedRadii[dotIndex] !== dot.radius) {
+        circle.setAttribute('r', String(dot.radius))
+        renderedRadii[dotIndex] = dot.radius
       }
+
+      let pathData = ''
+      for (const line of dot.lines) {
+        pathData += `M${line.x1} ${line.y1}L${line.x2} ${line.y2}`
+      }
+      linePaths[dotIndex]!.setAttribute('d', pathData)
     }
 
     // The Vue 2 mouseInteraction ran after dotUpdate, so these model changes
@@ -124,6 +126,7 @@ onMounted(() => {
   const rebuildNetwork = () => {
     const viewportWidth = window.innerWidth
     const viewportHeight = window.innerHeight
+
     if (viewportWidth === lastViewportWidth && viewportHeight === lastViewportHeight) return false
 
     lastViewportWidth = viewportWidth
@@ -132,7 +135,8 @@ onMounted(() => {
     pointer.distances = []
     lifecycle?.clearTracked()
     circles = []
-    lines = []
+    renderedRadii = []
+    linePaths = []
 
     const layer = dynamicLayer.value
     if (!layer) return false
@@ -150,25 +154,22 @@ onMounted(() => {
       lifecycle?.track(circle)
       layer.appendChild(circle)
       circles.push(circle)
+      renderedRadii.push(dot.radius)
 
-      for (const line of dot.lines) {
-        const element = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-        element.setAttribute('x1', String(line.x1))
-        element.setAttribute('y1', String(line.y1))
-        element.setAttribute('x2', String(line.x2))
-        element.setAttribute('y2', String(line.y2))
-        element.setAttribute('stroke', 'rgba(0,255,255,0.00)')
-        element.setAttribute('stroke-width', '1')
-        lifecycle?.track(element)
-        layer.appendChild(element)
-        lines.push(element)
-      }
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      path.setAttribute('class', 'hero__network-lines')
+      path.setAttribute('fill', 'none')
+      path.setAttribute('stroke', 'rgba(0,255,255,0.00)')
+      path.setAttribute('stroke-width', '1')
+      lifecycle?.track(path)
+      layer.appendChild(path)
+      linePaths.push(path)
     }
 
     // Preserve the legacy synchronous first update and style initialization.
     updateNetwork()
     for (const circle of circles) circle.setAttribute('fill', '#ADAAAA51')
-    for (const line of lines) line.setAttribute('stroke', '#ADAAAA33')
+    for (const path of linePaths) path.setAttribute('stroke', '#ADAAAA33')
 
     if (latestClientPointer && runState?.isActive) {
       const bounds = svg.getBoundingClientRect()
@@ -188,8 +189,18 @@ onMounted(() => {
   }
 
   const handleResize: EventListener = () => {
+    // Mobile Safari emits resize events while its browser chrome expands and
+    // collapses during a scroll. The CSS viewport already adapts; rebuilding
+    // the animated SVG here would replace hundreds of live nodes mid-gesture.
+    // Real mobile orientation changes are handled separately below.
+    if (coarsePointerQuery.matches) return
     if (resizeTimer !== null) window.clearTimeout(resizeTimer)
     resizeTimer = window.setTimeout(flushResize, 100)
+  }
+
+  const handleOrientationChange: EventListener = () => {
+    if (resizeTimer !== null) window.clearTimeout(resizeTimer)
+    resizeTimer = window.setTimeout(flushResize, 150)
   }
 
   const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -216,6 +227,7 @@ onMounted(() => {
     lifecycle.listen(headline.value, 'blur', handleHeadlineMouseOut)
   }
   lifecycle.listen(window, 'resize', handleResize)
+  lifecycle.listen(window, 'orientationchange', handleOrientationChange)
   lifecycle.listen(document, 'visibilitychange', handleVisibilityChange)
   lifecycle.listen(mediaQuery, 'change', handleMotionPreference)
 
@@ -225,6 +237,7 @@ onMounted(() => {
   })
   runState.setReducedMotion(mediaQuery.matches)
   runState.setVisible(document.visibilityState === 'visible')
+
 })
 
 onUnmounted(() => {
@@ -238,7 +251,8 @@ onUnmounted(() => {
   lifecycle = null
   network = null
   circles = []
-  lines = []
+  renderedRadii = []
+  linePaths = []
   latestClientPointer = null
   pointer.moving = false
   pointer.distances = []
@@ -276,6 +290,8 @@ $glitch-blue-lime-end: (1.4px, 2.1px, 2.8px, 1.8px, 0.8px, -0.2px, -1.2px, -2.2p
   height: 90vh;
   min-height: 420px;
   overflow: hidden;
+  overflow-anchor: none;
+  contain: layout paint;
   background-repeat: no-repeat;
   background-position: 65% center;
   background-size: cover;
@@ -283,7 +299,14 @@ $glitch-blue-lime-end: (1.4px, 2.1px, 2.8px, 1.8px, 0.8px, -0.2px, -1.2px, -2.2p
 
 .hero__canvas {
   width: 100%;
-  height: 90vh;
+  height: 100%;
+  overflow-anchor: none;
+}
+
+@media (pointer: coarse) {
+  .hero__canvas {
+    touch-action: pan-y pinch-zoom;
+  }
 }
 
 .text-glitch {
