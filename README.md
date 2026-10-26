@@ -70,6 +70,8 @@ The static output directory is:
 
 Generated build output and installed dependencies are local artifacts and must not be committed.
 
+`nuxt.config.ts` also pins the Cloudflare Pages output root and public directory to `.output/public` when `CF_PAGES=1` or a Pages `NITRO_PRESET` is selected. This keeps the Pages-generated `_headers` and `_redirects` beside the HTML instead of using the preset's default `dist` directory. Leave the Pages dashboard output directory as `.output/public`. CI generates with the Cloudflare static preset before the ordinary build and verifies the artifact path, routes, 404 fallback, and cache headers without contacting GitHub.
+
 ## GitHub project refresh
 
 The Cloudflare build fetches all public repositories owned by `rezansrv`, excluding forks. Archived repositories remain included. It maps GitHub names, links, star counts, and descriptions to the existing project format; a missing description becomes empty text. Projects are ordered by descending star count, then by name using a consistent code-point comparison. New public repositories appear on the next successful build. Renamed, deleted, or newly private repositories are reflected in the next snapshot.
@@ -99,3 +101,5 @@ The refresh workflow does not run on PRs or pushes and refuses manual execution 
 If a successful deployment contains unwanted project changes, use Cloudflare Pages' [rollback to a previous successful production deployment](https://developers.cloudflare.com/pages/configuration/rollbacks/). Roll back the deployment artifact rather than rebuilding an old Git commit: GitHub data can change even when the source commit is identical.
 
 To pause periodic rebuilds, disable **Refresh GitHub projects** in Actions or remove its deploy hook. To return to the checked-in project snapshot for ordinary push builds as well, restore the Pages build command to `npm run generate && npm run test:generated`. This keeps the same output directory and public routes. Restore `npm run generate:cloudflare` to resume build-time syncing. Never rotate the hook URL by committing it; replace the GitHub secret instead.
+
+For an output-path hotfix rollback, restore a previous successful Pages deployment artifact and its matching dashboard publish directory; the older auto-detected Pages preset used `dist`. Do not point an older deployment build at `.output/public` unless that revision explicitly generates there. Current builds use `.output/public` in both environments.
