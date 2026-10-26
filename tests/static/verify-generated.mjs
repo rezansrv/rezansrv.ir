@@ -8,6 +8,7 @@ const robotsText = readFileSync(resolve(outputRoot, 'robots.txt'), 'utf8')
 const sitemapText = readFileSync(resolve(outputRoot, 'sitemap.xml'), 'utf8')
 const projectsData = JSON.parse(readFileSync(resolve(process.cwd(), 'data/projectsList.json'), 'utf8'))
 const postsData = JSON.parse(readFileSync(resolve(process.cwd(), 'data/postsList.json'), 'utf8'))
+const releaseYear = new Date().getUTCFullYear()
 const officialProfiles = [
   'https://github.com/rezansrv',
   'https://www.linkedin.com/in/reza-naserivand',
@@ -37,8 +38,8 @@ const routes = [
     title: 'Projects by Reza Naserivand | Software Engineer',
     canonical: 'https://rezansrv.ir/projects',
     heading: 'Projects',
-    content: ['rezansrv.ir', 'website-health-check'],
-    rowCount: 15,
+    content: [],
+    rowCount: projectsData.length,
   },
   {
     path: '/writing',
@@ -54,6 +55,12 @@ const routes = [
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
+
+function escapeHtml(value) {
+  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;')
+}
+
+assert.ok(projectsData.length > 0, 'The project data must not be empty')
 
 function parseJsonLd(html, expectedType) {
   const scripts = [...html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>(.*?)<\/script>/gs)]
@@ -94,7 +101,7 @@ for (const route of routes) {
     assert.ok(html.includes(content), `${route.path} should render ${content}`)
   }
 
-  assert.ok(html.includes('© 2026 Reza Naserivand'), `${route.path} should render the release year`)
+  assert.ok(html.includes(`© ${releaseYear} Reza Naserivand`), `${route.path} should render the release year`)
   assert.ok(html.includes('Made with Nuxt 4'), `${route.path} should identify the Nuxt foundation`)
   assert.match(html, /<span class="footer__nuxt" aria-hidden="true"[^>]*><svg[^>]*viewBox="0 0 512 512"/, `${route.path} should render the inline Nuxt logo`)
   assert.ok(!html.includes('Made with Vue v2'), `${route.path} should not retain the Vue 2 attribution`)
@@ -138,14 +145,17 @@ for (const route of routes) {
   }
 
   if (route.rowCount) {
-    const rows = html.match(/<tr(?:\s|>)/g) || []
+    const rows = html.match(/<tr\b[^>]*>[\s\S]*?<\/tr>/g) || []
     assert.equal(rows.length, route.rowCount, `${route.path} should render ${route.rowCount} content rows`)
 
     if (route.path === '/projects') {
-      assert.equal(projectsData.length, route.rowCount, 'The project data should contain 15 records')
-      for (const project of projectsData) {
-        assert.ok(html.includes(`href="${project.url}"`), `Generated /projects should include ${project.url}`)
-        assert.ok(html.includes(`aria-label="${project.name}"`), `Generated /projects should label the ${project.name} link`)
+      for (const [index, project] of projectsData.entries()) {
+        const row = rows[index]
+        assert.ok(row.includes(`href="${project.url}"`), `Generated /projects should include ${project.url} in data order`)
+        assert.ok(row.includes(`aria-label="${project.name}"`), `Generated /projects should label the ${project.name} link`)
+        assert.ok(row.includes(`>${escapeHtml(project.name)}</h3>`), `Generated /projects should render the name for ${project.name}`)
+        assert.ok(row.includes(`>✩ ${project.stars}</p>`), `Generated /projects should render the stars for ${project.name}`)
+        assert.ok(row.includes(`>${escapeHtml(project.description)}</p>`), `Generated /projects should render the description for ${project.name}`)
       }
     }
 
