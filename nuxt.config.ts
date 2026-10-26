@@ -1,9 +1,5 @@
 const siteUrl = 'https://rezansrv.ir'
 const releaseYear = new Date().getUTCFullYear()
-const nitroPreset = (process.env.NITRO_PRESET ?? '').replaceAll('_', '-')
-const isCloudflarePagesBuild = process.env.CF_PAGES === '1'
-  || nitroPreset === 'cloudflare-pages'
-  || nitroPreset === 'cloudflare-pages-static'
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-11',
@@ -44,11 +40,6 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    // Pages defaults to dist. Keep HTML, headers, redirects, and verification
-    // together in the same artifact used by local builds and the Pages dashboard.
-    output: isCloudflarePagesBuild
-      ? { dir: '{{ rootDir }}/.output/public', publicDir: '{{ output.dir }}' }
-      : undefined,
     // Nuxt 4.6.0 resolves this path with Windows separators, so Nitro's
     // string matcher can leave the SSR renderer external (nuxt/nuxt#36467).
     // The separator-agnostic matcher is a no-op on Linux and can be removed
