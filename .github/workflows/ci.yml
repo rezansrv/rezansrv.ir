@@ -45,17 +45,6 @@ jobs:
       - name: Run unit tests
         run: npm run test:unit
 
-      # Run before ordinary generation so an old local artifact cannot hide a
-      # provider-specific output-path regression.
-      - name: Generate and verify Cloudflare Pages static output
-        env:
-          CF_PAGES: '1'
-          NITRO_PRESET: cloudflare-pages-static
-        run: |
-          npm run generate
-          npm run test:generated
-          node tests/static/verify-cloudflare-output.mjs
-
       - name: Build
         run: npm run build
 

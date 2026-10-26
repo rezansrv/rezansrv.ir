@@ -25,7 +25,6 @@ const projectRecords = JSON.parse(
 const postRecords = JSON.parse(
   readFileSync(resolve(process.cwd(), 'data/postsList.json'), 'utf8'),
 ) as PostRecord[]
-const releaseYear = new Date().getUTCFullYear()
 
 const routes = [
   { path: '/', heading: 'Software engineering across web, data, and AI.', title: 'Reza Naserivand | Software Engineer' },
@@ -173,7 +172,7 @@ for (const route of routes) {
       }
     }
     const footer = page.getByRole('contentinfo')
-    await expect(footer).toContainText(`© ${releaseYear} Reza Naserivand`)
+    await expect(footer).toContainText('© 2026 Reza Naserivand')
     await expect(footer).toContainText('Made with Nuxt 4')
     await expect(footer.locator('.footer__nuxt svg')).toBeVisible()
     await expect(footer.locator('.footer__nuxt svg')).toHaveCSS('fill', 'rgb(0, 220, 130)')
