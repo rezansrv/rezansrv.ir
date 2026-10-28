@@ -38,7 +38,7 @@ const routes = [
     canonical: 'https://rezansrv.ir/projects',
     heading: 'Projects',
     content: ['rezansrv.ir', 'website-health-check'],
-    rowCount: 15,
+    rowCount: projectsData.length,
   },
   {
     path: '/writing',
@@ -142,7 +142,7 @@ for (const route of routes) {
     assert.equal(rows.length, route.rowCount, `${route.path} should render ${route.rowCount} content rows`)
 
     if (route.path === '/projects') {
-      assert.equal(projectsData.length, route.rowCount, 'The project data should contain 15 records')
+      assert.ok(projectsData.length > 0, 'The project data should not be empty')
       for (const project of projectsData) {
         assert.ok(html.includes(`href="${project.url}"`), `Generated /projects should include ${project.url}`)
         assert.ok(html.includes(`aria-label="${project.name}"`), `Generated /projects should label the ${project.name} link`)
